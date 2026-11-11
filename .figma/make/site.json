@@ -1,0 +1,10 @@
+{
+  "description": "Explore and manage shared visual research with tools for collecting, organizing, and presenting references in a polished workspace for creative teams.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

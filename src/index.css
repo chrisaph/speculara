@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #29348f;
+  --color-mist: #f1f5f9;
+  --color-sky: #38bdf8;
+  --color-cream: #f9f5f1;
+  --color-wine: #8f2934;
+  --font-display: 'Sora', sans-serif;
+  --font-sans: 'Manrope', system-ui, sans-serif;
+}
+
+@layer base {
+  body { background: #f1f5f9; color: #1e2761; font-family: var(--font-sans); }
+  .no-bar::-webkit-scrollbar { display: none; }
+}
+
+@layer components {
+  .neu { background: #f1f5f9; box-shadow: 9px 9px 18px #cbd3dd, -9px -9px 18px #ffffff; }
+  .neu-sm { background: #f1f5f9; box-shadow: 5px 5px 10px #cbd3dd, -5px -5px 10px #ffffff; }
+  .neu-sm:active { box-shadow: inset 3px 3px 6px #cbd3dd, inset -3px -3px 6px #fff; }
+  .neu-in { background: #f1f5f9; box-shadow: inset 5px 5px 10px #cbd3dd, inset -5px -5px 10px #ffffff; }
+  .neu-btn { background: linear-gradient(145deg, #3544ad, #29348f); box-shadow: 5px 5px 10px #cbd3dd, -5px -5px 10px #fff; transition: transform .15s, box-shadow .15s; }
+  .neu-btn:hover { background: linear-gradient(145deg, #38bdf8, #2a9fd8); color: #0f1a5c; }
+  .neu-btn:active { transform: scale(.97); box-shadow: inset 3px 3px 6px rgba(0,0,0,.25); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+@layer components {
+  .neu-scroll { scrollbar-width: thin; scrollbar-color: #29348f #e2e8f0; }
+  .neu-scroll::-webkit-scrollbar { width: 12px; }
+  .neu-scroll::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 99px; box-shadow: inset 2px 2px 4px #cbd3dd, inset -2px -2px 4px #fff; }
+  .neu-scroll::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#38bdf8,#29348f); border-radius: 99px; border: 3px solid #e2e8f0; }
+}
