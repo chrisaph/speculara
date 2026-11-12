@@ -51,6 +51,8 @@ def test_recent_collapse_can_still_report_genuine_zero_backtest():
     p=insights._forecast(frame(list(range(12)),[100]*9+[1]*3),'likes',8,as_of='2026-11-12',basis='post')
     assert p['accuracy']==0 and p['validation']['weighted_error_pct']>=100
     assert p['validation']['actual_total']==3
+    assert p['forecast']==[] and p['forecast_supported'] is False
+    assert len(p['history'])==12 and p['validation']['observations']
 
 
 def test_default_prediction_and_weekly_trends_keep_separate_units():

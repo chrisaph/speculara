@@ -48,7 +48,7 @@ def _choose_model(train, horizon=1):
 
 def _forecast(df, metric, horizon, as_of=None, basis='week'):
     rows = known(df, metric)
-    empty = {'metric': metric, 'basis':basis, 'history': [], 'forecast': [], 'accuracy': None,
+    empty = {'metric': metric, 'basis':basis, 'history': [], 'forecast': [], 'forecast_supported':False, 'accuracy': None,
              'validation': {'method': 'Held-out weighted absolute percentage error', 'test_weeks': 0},
              'reason': f'No observed {metric} values were supplied.'}
     if not len(rows):
@@ -102,6 +102,10 @@ def _forecast(df, metric, horizon, as_of=None, basis='week'):
         result['validation']['baseline_weighted_error_pct']=round(100*float(np.abs(test-baseline).sum())/denom,1) if denom else None
         result['validation']['baseline_model']=f'Recent four-{unit[:-1]} average'
         result['validation']['selection']='Rolling multi-step validation on training data using the holdout horizon; final holdout excluded from model selection.'
+        if wape is None or round(wape,1)>=100:
+            result['reason']='Forecast withheld: the held-out predictions were not reliable enough. Observed history is still shown. Collect more representative posts or use the charts to compare actual results.'
+            return result
+        result['forecast_supported']=True
         for i, v in enumerate(fc, 1):
             band = 1.64 * error * np.sqrt(i)
             result['forecast'].append({'date': f'Next post {i}' if basis=='post' else (weekly.index[-1]+pd.Timedelta(weeks=i)).strftime('%Y-%m-%d'),

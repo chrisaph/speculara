@@ -25,4 +25,6 @@ A recent-post sample was resampled into weekly sums and calendar gaps became zer
 
 ## Remaining limits
 
+Follow-up safeguard: forecasts are withheld when held-out WAPE is undefined or reaches 100%. Observed history and validation evidence remain available. The UI also applies this guard to older results already in memory, hides the unsupported band/download and labels the projection unavailable. The 100% threshold is an application safeguard, not a statistical certification of forecasts below it. Analysis version 8 refreshes saved/cache behavior.
+
 Collected counts are snapshots. Older posts have had more time to gain engagement, and a sample of recent posts is not complete account history. Per-post estimates still do not represent performance at a fixed exposure age. Virality, distribution shifts and small holdouts can make any chosen model unreliable. The method change does not promise improved error for every account or metric.
