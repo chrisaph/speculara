@@ -1,10 +1,14 @@
 # Render backend + Netlify frontend
 
-Netlify serves React; Render runs Python, Node, Chromium and a virtual display. This is a private, operator-led MVP. The configured Render Standard service and 1 GB persistent disk are **paid resources**: review pricing before creating them. These files do not provision cloud resources.
+Netlify serves React; Render runs Python, Node, Chromium and a virtual display. This is a private, operator-led temporary demo. The checked-in Blueprint now selects **Render Free with no persistent disk**. Choose Netlify's Free plan too. These files do not provision cloud resources.
+
+Render Free currently provides 512 MB RAM and 0.1 CPU, sleeps after 15 idle minutes, and can restart at any time. Files, saved social sign-ins and in-memory results can disappear on sleep, restart or redeploy. The collector plus desktop may exceed available memory; this configuration enables a trial, not a guarantee that live collection will work. Start with five posts and one visitor. CSV/Excel is the demo fallback, but also needs target-service verification. Provider quotas and hosting usage limits still apply.
 
 ## Backend
 
 Create a Render **Blueprint** from this repository's `staging` branch using root `render.yaml`. Leave the root directory at the repository root. It builds `deploy/backend.Dockerfile`, including the collector dependencies; do not use the old Python-only service configuration. Keep one instance because collection and saved sessions are single-user resources.
+
+Confirm the service shows **Free** and no disk before creating it. If you already created a paid service, this Git change does not cancel charges: select Free in Render and remove its disk there first. Export any needed files before deleting a disk; its contents are lost. A workspace's free plan alone does not make an individual paid service free.
 
 Enter `GEMMA_API_KEY` and `CORS_ORIGINS`. The latter is your exact Netlify HTTPS origin. If unknown initially, temporarily use `http://localhost:8443`, then replace it after creating Netlify and redeploy Render. Leave `CORS_ORIGIN_REGEX` empty.
 
@@ -12,7 +16,7 @@ The Blueprint generates `DEMO_ACCESS_TOKEN` and `OPERATOR_ACCESS_TOKEN`. Find th
 
 Supabase is optional. Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in Render and run `backend/supabase_schema.sql` to enable history. Otherwise `database:false` is expected.
 
-Wait for the Docker build, then open `https://YOUR-SERVICE.onrender.com/api/health`. Expect `ok:true` and `llm:true`; this checks configuration, not provider quota. Caddy listens on Render's public port; Python and the desktop use private loopback ports. The startup script initializes the persistent disk, then runs the application and browser as UID 10001.
+Wait for the Docker build, then open `https://YOUR-SERVICE.onrender.com/api/health`. Expect `ok:true` and `llm:true`; this checks configuration, not provider quota. After idle sleep, open health and wait for it to finish waking before unlocking Netlify. Caddy listens on Render's public port; Python and the desktop use private loopback ports. The startup script initializes temporary storage, then runs the application and browser as UID 10001.
 
 ## Frontend
 
@@ -61,18 +65,23 @@ Enter HTTP Basic username `operator` and the operator token as password. Connect
 Remove-Item Env:OPERATOR_ACCESS_TOKEN
 ```
 
-Use `cancel` only for a genuinely stuck collection. Disable `ENABLE_REMOTE_DESKTOP` and redeploy after signing in. Saved sessions remain on `/data/socialmonitor`. Then test a small collection from Netlify. Only one collection can run at a time.
+Use `cancel` only for a genuinely stuck collection. On **Free**, keep `ENABLE_REMOTE_DESKTOP=1` during your demo: changing it and redeploying after sign-in can erase the new session. The desktop remains protected by the private operator key. Finish the login with the helper, close the desktop tab, then test five posts from Netlify. Only one collection can run at a time. When the demo ends, disable the desktop and redeploy; expect to sign in again next time. Never share the operator key with attendees.
+
+For durable sessions later, upgrade to a paid service and attach a disk at `/data`. Only with that disk can sessions survive redeploys; on that setup you can disable the desktop and redeploy after signing in without intentionally discarding storage. Free does not support persistent disks or SSH/shell access, so use the HTTPS helper above.
 
 ## Acceptance checks and limits
 
 - Health responds; `/api/access` returns 401 without a token. Wrong demo codes fail; refreshing locks the UI.
 - Upload the synthetic CSV/XLSX and inspect all six panels, coverage, evidence, correlations and honest forecast reliability.
 - Ask Gemma a question and generate strategy. Confirm actual responses or clearly labeled provider/fallback errors; configured keys alone do not prove quota.
-- Verify protected operator sign-in, a small live collection, and session persistence after a Render restart.
-- Disable the desktop again and confirm its URL returns 404.
+- Verify protected operator sign-in and a five-post live collection; check Render logs for memory-related restarts.
+- A Render restart may discard sign-in on Free. Verify that repeating the operator sign-in recovers collection instead of expecting persistence.
+- After the demo, disable the desktop and confirm its URL returns 404. Expect to repeat sign-in next time.
 
 Local automated tests cover access separation, CORS, frontend gating, URL validation, gateway routing and builds. This machine has no Docker daemon: the Linux image build and real Render/Netlify/browser smoke checks must complete on the target services before calling the cloud deployment verified. No cloud service has been created by this change. Local development retains its existing desktop sign-in and does not require demo codes by default.
 
 Sources: [Render web services](https://render.com/docs/web-services), [Blueprint fields](https://render.com/docs/blueprint-spec), [persistent disks](https://render.com/docs/disks), [pricing](https://render.com/pricing), [Netlify proxy timeout](https://docs.netlify.com/manage/routing/redirects/rewrites-proxies/), [Caddy authentication](https://caddyserver.com/docs/caddyfile/directives/basic_auth), [Playwright Docker](https://playwright.dev/docs/docker).
+
+Free-tier limits: [Render Free](https://render.com/docs/free) and [compute plans](https://render.com/docs/compute-plans).
 
 The [single-VPS guide](README.md) remains an alternative.

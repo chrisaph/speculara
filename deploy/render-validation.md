@@ -1,5 +1,7 @@
 # Render / Netlify preparation checks — 2026-11-13
 
+Free-tier configuration update: root `render.yaml` now selects `plan: free`, removes the disk, and limits BLAS/OpenMP to one thread. YAML assertions confirmed Free/no disk and the collector Dockerfile; all four hosting/URL tests passed again. The setup guide documents cold starts, temporary sign-in, constrained browser memory and repeated operator login. No actual Free instance or container resource usage has been tested; the results below do not establish that Chromium fits Free's memory limit.
+
 Passed locally without desktop automation or cloud provisioning:
 
 - Full Python suite: 133 passed before adding one more operator-positive test; focused final access suite: 8 passed. Existing statsmodels convergence/numerical warnings remain.

@@ -73,7 +73,7 @@ Open http://localhost:8443 and test an analysis. To run the backend tests from `
 3. Copy the Project URL from the Connect dialog and a backend secret key from Settings -> API Keys into the backend environment above. The variable remains named `SUPABASE_SERVICE_ROLE_KEY`; it also accepts the legacy `service_role` key. Never put this key in React.
 
 ## Deployment requirements
-Follow the complete [Render + Netlify guide](../deploy/render-netlify.md), including the Docker runtime, persistent browser disk, access code and separate operator sign-in. The [single-VPS guide](../deploy/README.md) is an alternative.
+Follow the complete [Render Free + Netlify guide](../deploy/render-netlify.md), including the Docker runtime, access code and separate operator sign-in. Browser sessions are temporary on Free; a persistent disk requires a paid upgrade. The [single-VPS guide](../deploy/README.md) is an alternative.
 
 The original Python-only Dockerfile cannot run the collector. The root Render blueprint now uses `deploy/backend.Dockerfile`, which includes Python, Node, Playwright/Chromium and protected operator sign-in. Use the repository root as the build context.
 

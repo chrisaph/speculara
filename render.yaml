@@ -3,15 +3,11 @@ services:
     name: speculara-api
     runtime: docker
     branch: staging
-    plan: standard
+    plan: free
     numInstances: 1
     dockerContext: .
     dockerfilePath: ./deploy/backend.Dockerfile
     healthCheckPath: /api/health
-    disk:
-      name: browser-sessions
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: GEMMA_API_KEY
         sync: false
@@ -29,3 +25,7 @@ services:
         value: "0"
       - key: SPECULARA_COLLECTOR_DATA_DIR
         value: /data/socialmonitor
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
