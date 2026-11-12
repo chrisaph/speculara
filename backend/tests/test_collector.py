@@ -134,6 +134,40 @@ def test_login_releases_browser_lock_when_window_closes(monkeypatch):
     assert not collector._lock.locked() and collector._login_process is None
 
 
+def test_retry_login_closes_existing_session_before_reopening(monkeypatch):
+    calls = []
+    monkeypatch.setattr(collector, '_login_process', SimpleNamespace(poll=lambda: None))
+    collector._lock.acquire()
+    async def finish():
+        calls.append('close existing')
+        collector._login_process = None
+        collector._lock.release()
+    monkeypatch.setattr(collector, 'finish_login', finish)
+    proc = SimpleNamespace(stdin=io.StringIO(), stdout=io.StringIO('{"event":"login_ready"}\n'), wait=lambda: 0, poll=lambda: 0)
+    def process():
+        calls.append('open new')
+        return proc
+    monkeypatch.setattr(collector, '_process', process)
+    async def run():
+        assert (await collector.start_login('instagram'))['opened']
+        await asyncio.gather(*collector._login_tasks)
+    asyncio.run(run())
+    assert calls == ['close existing', 'open new']
+    assert not collector._lock.locked()
+
+
+def test_login_does_not_replace_an_active_collection(monkeypatch):
+    monkeypatch.setattr(collector, '_login_process', None)
+    collector._lock.acquire()
+    try:
+        with pytest.raises(collector.CollectorError) as error:
+            asyncio.run(collector.start_login('instagram'))
+        assert error.value.status_code == 409
+        assert 'Cancel' in str(error.value)
+    finally:
+        collector._lock.release()
+
+
 def test_analysis_is_cached_locally_even_without_storage(monkeypatch):
     calls = []
     monkeypatch.setattr(main.db, "find_cached", lambda _: None)

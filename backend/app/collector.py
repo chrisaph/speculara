@@ -174,8 +174,12 @@ async def start_login(network: str) -> dict:
     global _login_process, _progress
     if network not in ("instagram", "facebook"):
         raise CollectorError("Choose Instagram or Facebook for sign-in. TikTok uses public pages.", 422)
+    # Retrying sign-in is an explicit request to reopen its window. A hidden or
+    # minimized login must not leave the user trapped behind a permanent 409.
+    if _login_process is not None:
+        await finish_login()
     if not _lock.acquire(blocking=False):
-        raise CollectorError("Finish the current collection or close the existing sign-in window first.", 409)
+        raise CollectorError("The collector is busy. Cancel the current collection before opening sign-in.", 409)
     proc = None
     _done.clear()
     try:

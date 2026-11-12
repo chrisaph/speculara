@@ -287,7 +287,7 @@ export default function App() {
                   <select aria-label="Network to sign in to" value={loginNetwork} onChange={(e) => setLoginNetwork(e.target.value)} className="neu-in min-h-10 rounded-lg px-2">
                     <option value="instagram">Instagram</option><option value="facebook">Facebook</option>
                   </select>
-                  <button type="button" disabled={busy} onClick={signIn} className="neu-sm min-h-10 rounded-lg px-3 font-semibold text-ink disabled:opacity-50">Sign in for comments</button>
+                  <button type="button" disabled={busy} onClick={signIn} className="neu-sm min-h-10 rounded-lg px-3 font-semibold text-ink disabled:opacity-50">{loginOpen ? 'Reopen sign-in window' : 'Sign in for comments'}</button>
                   {loginOpen && <button type="button" onClick={finishSignIn} disabled={busyAction === 'finish'} className="neu-btn min-h-10 rounded-lg px-3 font-semibold text-white">{busyAction === 'finish' ? 'Closing…' : 'Done signing in'}</button>}
                 </div>
                 <p className="mt-2">Instagram comment text and Facebook collection require sign-in. Sign in in the separate browser window, then click Done signing in here. TikTok uses public pages.</p>
