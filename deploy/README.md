@@ -15,7 +15,7 @@ This matches the current application's shared saved browser profile, in-memory c
 | One browser profile and Python lock | Keep one backend process/replica; do not load-balance separate workers against it |
 | Relative API fallback is localhost:8000 | The hosted frontend needs a same-origin API base, not each visitor's localhost |
 
-The new `compose.yaml` and `deploy/*` prepare the complete route. Legacy Netlify/Render files remain for the separate file-upload-only scenario. There is no requirement to buy both a VPS and separate frontend hosting for this private MVP.
+This is the alternative single-VPS route. For the user's selected Render backend and Netlify frontend, follow [Render + Netlify](render-netlify.md), which now includes the collector and protected operator desktop. Do not combine the two deployment procedures.
 
 ## Components
 

@@ -29,7 +29,9 @@
 !deploy/
 !deploy/*.Dockerfile
 !deploy/Caddyfile
+!deploy/RenderCaddyfile
 !deploy/entrypoint.sh
+!deploy/render-start.sh
 !deploy/collector-admin.py
 **/.env*
 **/.socialmonitor/**

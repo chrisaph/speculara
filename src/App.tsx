@@ -4,6 +4,7 @@ import { PredictPanel, RecommendPanel, ChartsPanel, CorrelationPanel } from './c
 import { SentimentPanel, DemandPanel, EvidenceSources, SourceButton } from './components/AnalysisPanels'
 import { SuggestionStrip } from './components/SuggestionStrip'
 import { MetricCoverage } from './components/MetricCoverage'
+import { AccessGate } from './components/AccessGate'
 
 type Key = 'predict' | 'recommend' | 'charts' | 'correlation' | 'sentiment' | 'demand'
 
@@ -109,7 +110,7 @@ function Chat({ picked }: { picked: Key | null }) {
 const MARKETS = ['Marketing Teams', 'Advertisement Agencies', 'Public Relations (PR) Agencies', 'Brand Strategists', 'Market Research Analysts']
 
 /* ---------- App ---------- */
-export default function App() {
+function Workspace() {
   const [picked, setPicked] = useState<Key | null>(null)
   const [tab, setTab] = useState<Key | null>(null)
   const [url, setUrl] = useState('')
@@ -350,3 +351,5 @@ export default function App() {
     </Seed.Provider>
   )
 }
+
+export default function App() { return <AccessGate><Workspace /></AccessGate> }

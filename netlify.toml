@@ -1,6 +1,11 @@
 [build]
-  command = "npm run build"
+  command = "npm run build:netlify"
   publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+  VITE_COLLECTOR_MODE = "operator"
+  VITE_REQUIRE_ACCESS_CODE = "true"
 
 [[redirects]]
   from = "/*"

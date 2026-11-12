@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { api } from '../src/api.ts'
+import { api, setAccessToken } from '../src/api.ts'
 
 test('hung fetch is aborted at its deadline', async (t) => {
   t.mock.method(globalThis, 'fetch', (_, options) => new Promise((_, reject) => {
@@ -27,4 +27,16 @@ test('backend errors remain actionable', async (t) => {
 test('successful responses are returned normally', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => Response.json({ post_count: 20 }))
   assert.equal((await api('/test')).post_count, 20)
+})
+
+test('demo token is sent in headers and can be cleared',async t=>{
+  let expected='Bearer test-demo'
+  t.mock.method(globalThis,'fetch',async(_,options)=>{
+    assert.equal(options.headers.Authorization,expected)
+    return Response.json({ok:true})
+  })
+  try {
+    setAccessToken('test-demo');await api('/api/access')
+    setAccessToken('');expected=undefined;await api('/api/access')
+  } finally {setAccessToken('')}
 })

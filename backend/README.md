@@ -1,5 +1,7 @@
 # Speculara API (FastAPI)
 
+For Render backend + Netlify frontend deployment, use the [hosting guide](../deploy/render-netlify.md). Hosted session controls require the separate operator key; local desktop controls retain their existing behavior.
+
 Flow: profile URL -> SocialMonitor browser collector -> Python analytics -> optional Supabase persistence -> React results. Gemma (`gemma-4-31b-it`) answers chat questions from the analysis facts. Profile analysis makes no Google Search or other LLM research calls.
 
 Endpoints: `GET /api/health`, `POST /api/analyze {url}`, `GET /api/sample`, `POST /api/upload` (csv/xlsx, in memory),
@@ -71,14 +73,14 @@ Open http://localhost:8443 and test an analysis. To run the backend tests from `
 3. Copy the Project URL from the Connect dialog and a backend secret key from Settings -> API Keys into the backend environment above. The variable remains named `SUPABASE_SERVICE_ROLE_KEY`; it also accepts the legacy `service_role` key. Never put this key in React.
 
 ## Deployment requirements
-The recommended full private MVP setup is now documented in [the single-VPS deployment guide](../deploy/README.md), with root build contexts, both runtimes, the browser, persistent sessions and operator-only login. The older Render/Netlify instructions below describe the Python/file-based alternative and do not by themselves provide the live collector.
+Follow the complete [Render + Netlify guide](../deploy/render-netlify.md), including the Docker runtime, persistent browser disk, access code and separate operator sign-in. The [single-VPS guide](../deploy/README.md) is an alternative.
 
-The original Python-only Dockerfile cannot run the local browser collector. Hosting requires a container with Python, Node, Playwright/Chromium and persistent browser storage. Interactive sign-in is available on the local computer only. Do not deploy the existing Render blueprint unchanged for this collector setup.
+The original Python-only Dockerfile cannot run the collector. The root Render blueprint now uses `deploy/backend.Dockerfile`, which includes Python, Node, Playwright/Chromium and protected operator sign-in. Use the repository root as the build context.
 
 For a suitably configured server, New -> Blueprint (uses `render.yaml`), set `GEMMA_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `CORS_ORIGINS`. Set `CORS_ORIGINS` to your Netlify URL. `GEMMA_MODEL` is optional and defaults to `gemma-4-31b-it`.
 
 ## Deploy React (Netlify)
-Build `npm run build`, publish `dist` (see `netlify.toml`). Site settings -> Environment variables:
+Build `npm run build:netlify`, publish `dist` (see `netlify.toml`). Site settings -> Environment variables:
 `VITE_API_URL=https://speculara-api.onrender.com` then redeploy.
 
 Results are cached per profile for 6 hours, including an in-memory cache of up to 100 profiles when Supabase is unavailable. The in-memory cache resets when the backend restarts. The cache accepts only SocialMonitor-sourced analyses, so older LLM research results are not reused. Test with `npm.cmd run collector:test` and `npm.cmd run test:api` from the root and `./.venv/Scripts/python.exe -m pytest` from backend.

@@ -19,6 +19,7 @@ from .evidence import ANALYSIS_VERSION, restore_posts
 from .chat_context import build_chat_context, cited_sources, model_context
 from .strategy import generate_strategy
 from .metric_import import merge_metrics
+from .access import DemoAccessMiddleware, operator_access
 
 log = logging.getLogger("speculara")
 s = get_settings()
@@ -35,6 +36,8 @@ async def _optional_storage(function, *args):
 
 @asynccontextmanager
 async def lifespan(_app):
+    if s.require_access_code and not (s.demo_access_token and s.operator_access_token):
+        raise RuntimeError('Hosted mode needs DEMO_ACCESS_TOKEN and OPERATOR_ACCESS_TOKEN.')
     try:
         yield
     finally:
@@ -43,6 +46,7 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="Speculara API", version="1.0.0", lifespan=lifespan)
+app.add_middleware(DemoAccessMiddleware)
 app.add_middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_origin_regex=s.cors_origin_regex,
                    allow_methods=["*"], allow_headers=["*"])
 
@@ -62,6 +66,11 @@ def _row_response(row: dict) -> dict | None:
 @app.get("/api/health")
 def health():
     return {"ok": True, "llm": bool(s.gemma_api_key), "database": db.enabled()}
+
+
+@app.get('/api/access')
+def access_check():
+    return {'ok':True}
 
 
 @app.post("/api/analyze")
@@ -129,6 +138,9 @@ async def collector_login(req: CollectorLoginRequest, request: Request):
 
 
 def _require_local(request: Request):
+    # Hosted controls require a separate operator key, checked before this route.
+    if (get_settings().require_access_code or get_settings().demo_access_token) and operator_access(request):
+        return
     # Opening a desktop window is a local action, available only to this machine.
     if not request.client or request.client.host not in {"127.0.0.1", "::1", "localhost", "testclient"}:
         raise HTTPException(403, "Collector sign-in is available only on the local computer.")

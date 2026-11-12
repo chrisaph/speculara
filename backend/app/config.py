@@ -8,6 +8,9 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False, encodi
 
 
 class Settings:
+    require_access_code: bool = os.getenv('SPECULARA_REQUIRE_AUTH','0')=='1'
+    demo_access_token: str = os.getenv('DEMO_ACCESS_TOKEN','')
+    operator_access_token: str = os.getenv('OPERATOR_ACCESS_TOKEN','')
     # GEMINI_API_KEY is also accepted for existing Google AI Studio setups.
     gemma_api_key: str = os.getenv("GEMMA_API_KEY") or os.getenv("GEMINI_API_KEY", "")
     gemma_model: str = os.getenv("GEMMA_MODEL", "gemma-4-31b-it")

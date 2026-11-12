@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: deploy/backend.Dockerfile
+      target: runtime
     restart: unless-stopped
     stop_grace_period: 40s
     init: true

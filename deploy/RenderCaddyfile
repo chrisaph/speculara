@@ -1,0 +1,33 @@
+{
+    admin off
+    auto_https off
+}
+
+# Render terminates public HTTPS; only this gateway listens on its public port.
+:{$PORT:10000} {
+    request_body {
+        max_size 16MB
+    }
+    handle_path /operator/desktop/* {
+        route {
+            @off expression `"{$ENABLE_REMOTE_DESKTOP:0}" != "1"`
+            respond @off "Operator desktop is disabled." 404
+            @badOrigin expression `{http.request.header.Origin} != "" && {http.request.header.Origin} != "https://" + {http.request.hostport}`
+            respond @badOrigin "Forbidden origin." 403
+            basic_auth {
+                operator {$OPERATOR_PASSWORD_HASH}
+            }
+            reverse_proxy 127.0.0.1:6080
+        }
+    }
+    handle /api/* {
+        reverse_proxy 127.0.0.1:{$SPECULARA_INTERNAL_API_PORT:8001} {
+            transport http {
+                read_timeout 650s
+            }
+        }
+    }
+    handle {
+        respond "Speculara backend. Open the Netlify frontend." 404
+    }
+}

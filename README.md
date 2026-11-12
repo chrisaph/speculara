@@ -4,7 +4,7 @@ Local social media analysis with forecasts, post similarity, charts, correlation
 
 ## Run
 
-For the complete private hosted MVP, use the [single-VPS deployment setup](deploy/README.md). It includes the browser collector and operator-only session management. The existing Netlify/Render configuration alone covers the UI/Python-only file demo, not full live collection.
+For the hosted private MVP, follow the [Render backend + Netlify frontend setup](deploy/render-netlify.md). It includes browser collection, separate operator sign-in and a demo access code. The Render configuration uses a paid service and persistent disk. A [single-VPS deployment](deploy/README.md) is also available.
 
 See [backend setup](backend/README.md). Keep the Python API at `http://localhost:8000` and run `npm.cmd run dev` from this directory for the frontend at `http://localhost:8443`.
 

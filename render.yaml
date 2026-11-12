@@ -2,15 +2,30 @@ services:
   - type: web
     name: speculara-api
     runtime: docker
-    rootDir: backend
-    dockerfilePath: ./Dockerfile
+    branch: staging
+    plan: standard
+    numInstances: 1
+    dockerContext: .
+    dockerfilePath: ./deploy/backend.Dockerfile
     healthCheckPath: /api/health
+    disk:
+      name: browser-sessions
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: GEMMA_API_KEY
         sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
       - key: CORS_ORIGINS
         sync: false
+      - key: CORS_ORIGIN_REGEX
+        value: ""
+      - key: SPECULARA_REQUIRE_AUTH
+        value: "1"
+      - key: DEMO_ACCESS_TOKEN
+        generateValue: true
+      - key: OPERATOR_ACCESS_TOKEN
+        generateValue: true
+      - key: ENABLE_REMOTE_DESKTOP
+        value: "0"
+      - key: SPECULARA_COLLECTOR_DATA_DIR
+        value: /data/socialmonitor

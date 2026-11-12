@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:netlify": "node deploy/build-netlify.mjs",
     "preview": "vite preview",
     "format": "oxfmt",
     "collector:setup": "npm --prefix integrations/socialmonitor install",
@@ -14,7 +15,7 @@
     "collector:test": "node --test integrations/socialmonitor/worker.test.mjs",
     "test:api": "node --test tests/api.test.mjs",
     "test:analysis": "node --test tests/analysis-panels.test.mjs tests/insight-panels.test.mjs",
-    "test:hosting": "node --test tests/hosting.test.mjs"
+    "test:hosting": "node --test tests/hosting.test.mjs tests/netlify.test.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",
