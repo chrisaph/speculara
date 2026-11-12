@@ -18,6 +18,8 @@ interface Node {
   display_url?: string
   thumbnail_src?: string
   video_view_count?: number
+  share_count?: number
+  save_count?: number
   edge_liked_by?: { count?: number }
   edge_media_preview_like?: { count?: number }
   edge_media_to_comment?: { count?: number }
@@ -127,7 +129,8 @@ export const instagram: Collector = {
         thumb_url: n.thumbnail_src ?? n.display_url ?? null,
         likes: num(n.edge_liked_by?.count ?? n.edge_media_preview_like?.count),
         comments_count: num(n.edge_media_to_comment?.count),
-        shares: null,
+        shares: num(n.share_count),
+        saves: num(n.save_count),
         views: num(n.video_view_count),
         comments,
       })

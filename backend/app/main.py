@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 import re
 import asyncio
+import json
 from time import monotonic
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, Request
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import analytics, db, collector
@@ -16,6 +17,7 @@ from .schemas import AnalyzeRequest, ChatRequest, CollectorLoginRequest
 from .evidence import ANALYSIS_VERSION, restore_posts
 from .chat_context import build_chat_context, cited_sources
 from .strategy import generate_strategy
+from .metric_import import merge_metrics
 
 log = logging.getLogger("speculara")
 s = get_settings()
@@ -158,6 +160,25 @@ async def strategy(req: ChatRequest):
     if not req.analysis or not req.analysis.get('evidence', {}).get('posts'):
         raise HTTPException(422, 'Run an analysis first.')
     return await generate_strategy(req.analysis)
+
+
+@app.post('/api/metrics')
+async def import_metrics(file: UploadFile = File(...), analysis: str = Form(...)):
+    content=await file.read(10_000_001)
+    if len(content)>10_000_000 or len(analysis)>2_000_000:
+        raise HTTPException(413,'Metrics file or analysis is too large (10 MB file maximum).')
+    try:
+        active=json.loads(analysis)
+        if not isinstance(active,dict): raise ValueError('A current analysis is required.')
+        posts,summary=await asyncio.to_thread(merge_metrics,active,content,file.filename or '')
+        result=await asyncio.to_thread(analytics.analyze,posts)
+    except (ValueError,TypeError,KeyError) as error:
+        raise HTTPException(422,str(error))
+    profile={**(active.get('profile') or {})}
+    profile['unavailable_metrics']=[m for m,c in result['metric_availability'].items() if not c['complete']]
+    profile['notes']=f"{len(posts)} posts analyzed. Imported {summary['updated_values']} counts for {summary['matched_posts']} matching posts. Public and user-imported metrics are labeled separately."
+    result['facts']['data_quality']={'source':'Collected posts + user-imported metrics','unavailable_metrics':profile['unavailable_metrics'],'notes':profile['notes']}
+    return {'analysis_id':None,'cached':False,'profile':profile,'metric_import':summary,**result}
 
 
 @app.post("/api/chat")

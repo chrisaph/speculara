@@ -73,6 +73,7 @@ def posts_from_file(content: bytes, filename: str) -> list[Post]:
             posted_at=pd.to_datetime(row["posted_at"]).to_pydatetime(), caption=str(row["caption"]) if "caption" in raw.columns and pd.notna(row["caption"]) else "",
             likes=num("likes"), comments=num("comments"), shares=num("shares"), saves=num("saves"), views=num("views"), sales=num("sales"), comments_sample=cs,
             unavailable_metrics=missing, url=safe_url(row.get('url', row.get('post_url', ''))),
+            metric_sources={m:'Uploaded file' for m in ['likes','comments','shares','saves','views','sales'] if m not in missing},
         ))
     return out
 

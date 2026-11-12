@@ -31,6 +31,7 @@ class Post(BaseModel):
     unavailable_metrics: list[str] = Field(default_factory=list)
     url: str = ""
     comment_evidence: list[CommentEvidence] = Field(default_factory=list)
+    metric_sources: dict[str, str] = Field(default_factory=dict)
 
 
 class AnalyzeRequest(BaseModel):

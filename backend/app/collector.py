@@ -223,7 +223,7 @@ async def start_login(network: str) -> dict:
 
 def normalize(data: dict, canonical_url: str, network: str, handle: str) -> tuple[ProfileInfo, list[Post]]:
     posts: list[Post] = []
-    missing: set[str] = {"saves", "sales"}
+    missing: set[str] = set()
     seen: set[str] = set()
     skipped = 0
     sources = []
@@ -233,13 +233,13 @@ def normalize(data: dict, canonical_url: str, network: str, handle: str) -> tupl
             pid = str(raw["ext_id"])
             if pid in seen:
                 continue
-            unavailable = [key for key, field in (("likes", "likes"), ("comments", "comments_count"), ("shares", "shares"), ("views", "views")) if raw.get(field) is None] + ["saves", "sales"]
+            unavailable = [key for key, field in (("likes", "likes"), ("comments", "comments_count"), ("shares", "shares"), ("views", "views"), ("saves","saves")) if raw.get(field) is None] + ["sales"]
             url = safe_url(raw.get("url"))
             comment_rows = [c for c in (raw.get("comments") or []) if isinstance(c, dict) and c.get("text")][:8]
             p = Post(id=pid, posted_at=raw["posted_at"], type=types.get(raw.get("kind"), "Photo"),
                      caption=raw.get("caption") or "", likes=max(0, int(raw.get("likes") or 0)),
                      comments=max(0, int(raw.get("comments_count") or 0)), shares=max(0, int(raw.get("shares") or 0)),
-                     views=max(0, int(raw.get("views") or 0)),
+                     views=max(0, int(raw.get("views") or 0)), saves=max(0,int(raw.get('saves') or 0)),
                      comments_sample=[str(c["text"]) for c in comment_rows], url=url,
                      comment_evidence=[CommentEvidence(id=str(c.get("ext_id", "")), text=str(c["text"]),
                         author=str(c.get("author") or ""), posted_at=c.get("posted_at"),
@@ -253,7 +253,8 @@ def normalize(data: dict, canonical_url: str, network: str, handle: str) -> tupl
                 sources.append(ResearchSource(title=f"{network} post {pid}", url=url))
         except (KeyError, TypeError, ValueError, ValidationError):
             skipped += 1
-    notes = f"Collected {len(posts)} posts with SocialMonitor. Some metrics are unavailable: {', '.join(sorted(missing))}. Totals include only observed values; unavailable values use zero placeholders."
+    notes = f"Collected {len(posts)} posts with SocialMonitor. Totals include only observed values."
+    if missing: notes += f" Add your own Insights or sales counts for missing metrics: {', '.join(sorted(missing))}."
     if network == "Instagram" and not data.get("signed_in"):
         notes += " Sign in for comment text; public post counts can be available without signing in."
     if posts and not any(p.comments_sample for p in posts):

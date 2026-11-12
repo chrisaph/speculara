@@ -50,6 +50,15 @@ test('Instagram legacy timeline is supported and unrelated account data is exclu
   assert.deepEqual(timelinePosts({ unrelated: { items: [post] } }, 'brand'), [])
 })
 
+test('Instagram preserves supplied play/share/save counts across sparse payloads',()=>{
+ const raw={pk:'1',code:'A',ig_play_count:0,share_count:5,saved_count:4}
+ const wrap=node=>({data:{user:{username:'brand',edge_owner_to_timeline_media:{edges:[{node}]}}}})
+ const result=timelinePosts([wrap(raw),wrap({pk:'1',code:'A'})],'brand')
+ assert.equal(result[0].video_view_count,0)
+ assert.equal(result[0].share_count,5)
+ assert.equal(result[0].save_count,4)
+})
+
 test('arbitrary hosts, credentials, ports, post URLs and malformed handles are rejected', () => {
   for (const url of ['http://localhost/test', 'https://instagram.com.evil.test/brand', 'https://user:pass@instagram.com/brand', 'https://instagram.com:8080/brand', 'instagram.com/p/postid', 'instagram.com/accounts/login', 'tiktok.com/@a/video/123']) assert.throws(() => validateProfile(url))
 })

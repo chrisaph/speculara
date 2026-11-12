@@ -134,6 +134,7 @@ export type ReplyStatus = 'open' | 'done' | 'ignored'
 
 /** What a collector returns for one post: the post and the comments it could read. */
 export interface CollectedPost {
+  saves?: number | null
   ext_id: string
   url: string
   posted_at: string | null

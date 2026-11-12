@@ -62,3 +62,25 @@ test('root never generates mock facts or silently connects failed sample request
  assert.match(code,/Could not load sample data/)
  assert.match(code,/const liveFor = \(seed: string\) => live.get\(seed\)/)
 })
+
+test('metric coverage distinguishes missing, zero and imported counts',()=>{
+ const data={...analysis,metric_availability:{views:{known_posts:0,total:null},likes:{known_posts:5,total:100,imported_posts:2},sales:{known_posts:5,total:0,imported_posts:5}}}
+ const html=render.renderCoverage(data)
+ assert.match(html,/Not supplied/);assert.match(html,/2 user-imported/)
+ assert.match(html,/Import metrics CSV \/ Excel/);assert.match(html,/measured zero/)
+ assert.doesNotMatch(html,/NaN|undefined/)
+ const csv=render.metricsCSV(data)
+ assert.match(csv,/id,url,views,likes,comments,shares,saves,sales/)
+ assert.match(csv, /"","https:\/\/www.instagram.com\/reel\/qa0\/",,,,,,/)
+})
+test('zero backtest score explains excessive error and shows actual-versus-predicted evidence',()=>{
+ const html=render.renderValidation({accuracy:0,model:'Last observed week',validation:{weighted_error_pct:150,test_weeks:2,observations:[{date:'2026-11-01',actual:10,predicted:25}]}})
+ assert.match(html,/Why is the score 0%/);assert.match(html,/150%/)
+ assert.match(html,/does not mean the posts had no activity/);assert.match(html,/Actual/);assert.match(html,/Predicted/)
+})
+test('chat suggestions expose horizontal scrolling and both navigation controls',()=>{
+ const html=render.renderSuggestions(['First question','Second question','Third question'])
+ assert.match(html,/Previous chat suggestions/);assert.match(html,/Next chat suggestions/)
+ assert.match(html,/Scrollable chat suggestions/);assert.match(html,/Swipe, drag/)
+ assert.match(html,/Third question/);assert.match(html,/overflow-x-auto/)
+})

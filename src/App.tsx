@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { api } from './api'
 import { PredictPanel, RecommendPanel, ChartsPanel, CorrelationPanel } from './components/InsightPanels'
 import { SentimentPanel, DemandPanel, EvidenceSources, SourceButton } from './components/AnalysisPanels'
+import { SuggestionStrip } from './components/SuggestionStrip'
+import { MetricCoverage } from './components/MetricCoverage'
 
 type Key = 'predict' | 'recommend' | 'charts' | 'correlation' | 'sentiment' | 'demand'
 
@@ -90,7 +92,7 @@ function Chat({ picked }: { picked: Key | null }) {
         <div role="dialog" aria-label="Ask about your analysis" className="neu flex h-[min(34rem,80vh)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl sm:w-96">
           <div className="flex items-center justify-between px-4 py-3"><div><p className="font-display font-bold text-ink">Ask Speculara</p><p className="mt-1 text-[11px] text-slate-600">{analysis ? `Reading ${analysis.post_count ?? 0} posts · ${analysis.evidence?.comments?.length ?? 0} comment samples` : 'Connect an analysis to get started'}{picked ? ` · ${META[picked].title}` : ''}</p></div>
             <button onClick={() => setOpen(false)} aria-label="Close chat" className="neu-sm grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink">&times;</button></div>
-          <div className="neu-in neu-scroll mx-3 flex-1 space-y-3 overflow-y-auto rounded-2xl p-3 text-sm" aria-live="polite">
+          <div className="neu-in neu-scroll mx-3 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl p-3 text-sm" aria-live="polite">
             {msgs.map((message, index) => <div key={index} className={`max-w-[95%] rounded-2xl px-3 py-3 ${message.me ? 'ml-auto bg-ink text-white' : 'neu-sm text-slate-800'}`}>
               <p className="whitespace-pre-wrap break-words leading-relaxed">{message.t}</p>
               {!!message.sources?.length && <div className="mt-3 flex flex-wrap gap-2">{message.sources.map((source) => <SourceButton key={source.id} url={source.url} kind={source.kind} label={`Source ${source.id}`} />)}</div>}
@@ -99,9 +101,7 @@ function Chat({ picked }: { picked: Key | null }) {
             {sending && <p role="status" className="neu-sm rounded-2xl p-3 text-xs text-ink">Reading your analysis and collected evidence…</p>}
             <div ref={end} />
           </div>
-          <div className="no-bar flex gap-2 overflow-x-auto px-3 pt-3">
-            {['What does demand show?', 'Explain the sentiment', 'Which reel has the most questions?'].map((question) => <button key={question} disabled={sending} onClick={() => void send(question)} className="neu-sm min-h-9 shrink-0 rounded-full px-3 py-1.5 text-xs text-ink disabled:opacity-50">{question}</button>)}
-          </div>
+          <SuggestionStrip items={['What does demand show?','Explain the sentiment','Which reel has the most questions?','Why is the forecast score low?','Which metrics are missing?']} disabled={sending} onSelect={question=>void send(question)} />
           <form onSubmit={(event) => { event.preventDefault(); void send(text) }} className="flex gap-2 p-3">
             <input value={text} onChange={(event) => setText(event.target.value)} placeholder="Ask about your results" aria-label="Your question" className="neu-in min-h-11 min-w-0 flex-1 rounded-xl bg-transparent px-3 text-sm outline-none" />
             <button disabled={sending || !text.trim()} className="neu-btn min-h-11 rounded-xl px-4 text-sm text-white disabled:opacity-50">Send</button>
@@ -123,7 +123,7 @@ export default function App() {
   const [tab, setTab] = useState<Key | null>(null)
   const [url, setUrl] = useState('')
   const [err, setErr] = useState('')
-  const [source, setSource] = useState<{ seed: string; label: string } | null>(null)
+  const [source, setSource] = useState<{ seed: string; label: string; revision?:number } | null>(null)
   const [nudge, setNudge] = useState(false)
   const [busyAction, setBusyAction] = useState<'' | 'analyze' | 'sample' | 'login' | 'finish' | 'cancel'>('')
   const busy = busyAction !== ''
@@ -230,6 +230,7 @@ export default function App() {
   const colors = [INK, WINE, INK, WINE, INK, WINE]
   const locked = !source
   const researchSources: { title: string; url: string }[] = source ? (live.get(source.seed)?.profile?.sources ?? []) : []
+  const activeAnalysis=source?live.get(source.seed):undefined
   const dataNotes: string = source ? (live.get(source.seed)?.profile?.notes ?? '') : ''
 
   return (
@@ -298,6 +299,7 @@ export default function App() {
           </section>
 
           <div id="result" className="scroll-mt-24">
+            {source&&<MetricCoverage key={source.seed} analysis={live.get(source.seed)} onUpdated={analysis=>{if(live.get(source.seed)!==activeAnalysis)return;live.set(source.seed,analysis);setSource(current=>current?.seed===source.seed?{...current,revision:(current.revision||0)+1}:current)}} />}
             {dataNotes && <p className="mb-4 rounded-xl bg-sky/10 p-3 text-sm text-slate-700">{dataNotes}</p>}
             {source && live.get(source.seed)?.evidence ? <EvidenceSources analysis={live.get(source.seed)} /> : researchSources.length > 0 && (
               <p className="mb-4 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700">
@@ -310,7 +312,7 @@ export default function App() {
             {Primary ? (
               <>
                 <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2"><h2 className="font-display text-2xl font-bold text-ink sm:text-3xl">{META[picked!].title}</h2><span className="text-xs text-slate-600">Source: {source?.label}</span></div>
-                <Primary key={source?.seed} />
+                <Primary key={`${source?.seed}:${source?.revision||0}`} />
                 <div className="mt-10">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-600">Explore the others</p>
                   <div className="no-bar mb-3 flex gap-3 overflow-x-auto p-2" role="tablist">
@@ -321,7 +323,7 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  <Secondary key={source?.seed} />
+                  <Secondary key={`${source?.seed}:${source?.revision||0}`} />
                 </div>
               </>
             ) : (
@@ -339,7 +341,7 @@ export default function App() {
             <p className="mt-1">Forecasts use past posts with a confidence band; accuracy depends on the amount of data and date range. Trend longevity compares observed four-week patterns within the collected profile; its evidence dialog lists the matching dates and posts. No account-wide or global dataset is implied. Correlation shows association, not proof of cause. Sample mode uses demo data. Live results depend on the posts collected; data notes identify unavailable metrics.</p>
           </footer>
         </main>
-        <Chat key={source?.seed} picked={picked} />
+        <Chat key={`${source?.seed}:${source?.revision||0}`} picked={picked} />
       </div>
     </Seed.Provider>
   )

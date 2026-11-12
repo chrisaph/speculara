@@ -16,16 +16,35 @@ def known(df, metric):
 
 def availability(df):
     return {m: {'known_posts': len(known(df, m)), 'total_posts': len(df),
+                'imported_posts':int(known(df,m).metric_sources.map(lambda sources: m in sources).sum()) if 'metric_sources' in df else 0,
                 'total': int(known(df, m)[m].sum()) if len(known(df, m)) else None,
                 'complete': len(known(df, m)) == len(df)} for m in METRICS}
 
 
-def _fit(y, horizon):
-    return np.asarray(ExponentialSmoothing(y, trend='add', damped_trend=True,
-                      initialization_method='estimated').fit(optimized=True).forecast(horizon))
+def _fit(y, horizon, method='damped'):
+    if method=='last': return np.repeat(y[-1],horizon)
+    if method=='mean': return np.repeat(np.mean(y[-4:]),horizon)
+    fitted=ExponentialSmoothing(y,trend='add',damped_trend=True,initialization_method='estimated').fit(optimized=True)
+    if fitted.mle_retvals is not None and not fitted.mle_retvals.get('success',True):
+        raise ValueError('Smoothing model did not converge')
+    return np.asarray(fitted.forecast(horizon))
 
 
-def _forecast(df, metric, horizon):
+def _choose_model(train):
+    # Model selection sees training weeks only, never the final holdout.
+    origins=list(range(max(4,len(train)-4),len(train)))
+    methods=['last','mean','damped'] if origins else ['last','mean']
+    if not origins: origins=list(range(max(2,len(train)-2),len(train)))
+    losses={}
+    for method in methods:
+        try:
+            errors=[abs(float(train[i])-float(_fit(train[:i],1,method)[0])) for i in origins]
+            if errors and np.all(np.isfinite(errors)): losses[method]=np.mean(errors)
+        except (ValueError,ArithmeticError): continue
+    return min(losses,key=losses.get) if losses else 'last'
+
+
+def _forecast(df, metric, horizon, as_of=None):
     rows = known(df, metric)
     empty = {'metric': metric, 'history': [], 'forecast': [], 'accuracy': None,
              'validation': {'method': 'Held-out weighted absolute percentage error', 'test_weeks': 0},
@@ -33,24 +52,41 @@ def _forecast(df, metric, horizon):
     if not len(rows):
         return empty
     weekly = rows.set_index('posted_at')[metric].resample('W').sum()
+    today=pd.Timestamp(as_of).normalize() if as_of is not None else pd.Timestamp.now(tz='UTC').tz_localize(None).normalize()
+    partial=weekly[weekly.index>=today]
+    weekly=weekly[weekly.index<today]
     y = weekly.to_numpy(dtype=float)
     history = [{'date': d.strftime('%Y-%m-%d'), 'value': int(v)} for d, v in weekly.items()]
-    result = {**empty, 'history': history, 'reason': '', 'coverage': f'{len(rows)} of {len(df)} posts have this metric.'}
+    result = {**empty, 'history': history, 'reason': '', 'coverage': f'{len(rows)} of {len(df)} posts have this metric.',
+              'partial_weeks':[{'date':d.strftime('%Y-%m-%d'),'value':int(v)} for d,v in partial.items()]}
     if len(y) < 6 or not np.any(y):
-        result['reason'] = 'At least six weekly observations with a non-zero total are needed for a forecast.'
+        result['reason'] = 'At least six completed weekly observations with a non-zero total are needed for a forecast.'
         return result
     try:
-        fc = np.maximum(0, _fit(y, horizon))
         # A separate holdout fit prevents training data from becoming claimed accuracy.
         ntest = max(2, min(4, len(y) // 4))
         test = y[-ntest:]
-        validation = np.maximum(0, _fit(y[:-ntest], ntest))
+        method=_choose_model(y[:-ntest])
+        try:
+            fc = np.maximum(0, _fit(y,horizon,method))
+            validation = np.maximum(0, _fit(y[:-ntest],ntest,method))
+        except (ValueError,ArithmeticError):
+            method='last'  # A numerical fit failure must not break a usable baseline.
+            fc=np.maximum(0,_fit(y,horizon,method));validation=np.maximum(0,_fit(y[:-ntest],ntest,method))
+        if not np.isfinite(fc).all() or not np.isfinite(validation).all(): raise ValueError('Non-finite forecast')
         denom = float(np.abs(test).sum())
-        accuracy = round(max(0, 100 * (1 - np.abs(test-validation).sum()/denom))) if denom else None
+        absolute_error=float(np.abs(test-validation).sum())
+        wape=100*absolute_error/denom if denom else None
+        accuracy = round(max(0,100-wape)) if wape is not None else None
         error = float(np.sqrt(np.mean((test-validation)**2)))
         result['accuracy'] = accuracy
         result['validation'].update(test_weeks=ntest, train_weeks=len(y)-ntest,
-                                    start=weekly.index[-ntest].strftime('%Y-%m-%d'), end=weekly.index[-1].strftime('%Y-%m-%d'))
+                                    start=weekly.index[-ntest].strftime('%Y-%m-%d'), end=weekly.index[-1].strftime('%Y-%m-%d'),
+                                    weighted_error_pct=round(wape,1) if wape is not None else None,
+                                    absolute_error=round(absolute_error,1),actual_total=int(denom),
+                                    observations=[{'date':weekly.index[-ntest+i].strftime('%Y-%m-%d'),'actual':int(v),'predicted':round(float(validation[i]))} for i,v in enumerate(test)])
+        result['model']={'last':'Last observed week','mean':'Recent four-week average','damped':'Damped exponential smoothing'}[method]
+        result['validation']['selection']='Rolling validation within training weeks only; final holdout excluded from model selection.'
         for i, v in enumerate(fc, 1):
             band = 1.64 * error * np.sqrt(i)
             result['forecast'].append({'date': (weekly.index[-1]+pd.Timedelta(weeks=i)).strftime('%Y-%m-%d'),
@@ -63,7 +99,7 @@ def _forecast(df, metric, horizon):
 
 def predict(df, horizon_weeks=8):
     metrics = {m: _forecast(df, m, horizon_weeks) for m in METRICS}
-    metric = 'views' if len(known(df, 'views')) else 'likes' if len(known(df, 'likes')) else 'comments'
+    metric = max(['views','likes','comments'],key=lambda m: len(known(df,m)))
     primary = metrics[metric]
     history = primary['history']
     y = np.array([r['value'] for r in history], dtype=float)

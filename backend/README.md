@@ -99,4 +99,14 @@ CSV/Excel uploads preserve `url` or `post_url` and mark absent metric columns as
 
 Vite denies web access to `.socialmonitor` browser storage and `.venv` paths. It excludes backend, temporary QA and workbook-output folders from frontend file watching so locked Chrome session files cannot interrupt the frontend watcher.
 
+### Completing missing metrics
+
+After analyzing a profile, open **Your available metrics**, download the post-matched CSV template, fill known whole-number counts from your Insights or sales records, and choose **Import metrics CSV / Excel**. The import accepts CSV/XLSX with `id` or `url` plus `views`, `likes`, `comments`, `shares`, `saves`, `sales`. Blank cells keep existing values and missing status; a supplied zero is an observed zero. Rows must match the active posts and cannot be duplicated. Imported values are labeled user-imported, preserve comment evidence, and recalculate all panels/chat. Imports apply to the current browser analysis; keep your metrics file to reapply after a page reload. Private counts cannot be obtained from arbitrary public profiles by enabling a UI option.
+
+The Instagram adapter retains play, save and share counts when the normal page payload actually supplies them. It never invents absent counts. The correlation matrix expands automatically for newly available varying metrics (six metrics support up to 15 pairs).
+
+Forecast validation excludes unfinished weeks. Models are selected with rolling validation on training weeks, then tested on separate completed holdout weeks. The UI shows raw weighted percentage error and actual-versus-predicted evidence. A 0% backtest score means error was at least 100% of the actual held-out total, not that there was no activity. These are collected snapshot counts grouped by publication week; they do not reconstruct historical new engagement events. Small holdouts and incomplete collection limit forecast reliability.
+
+Chat suggestions support touch/trackpad scrolling, mouse dragging, keyboard focus, and previous/next buttons. Existing sign-in continues to use the Windows desktop account as documented above.
+
 Saved analyses with stored posts are upgraded to the current evidence format when loaded. Refresh the frontend and run the analysis again to replace an older result still held in the browser. Run `npm.cmd run test:analysis` for all six panels, numeric reconciliation, filters, safe URLs and evidence checks. The before/after QA workbooks and their case results are in `outputs/speculara-qa-20261112` and `qa`.

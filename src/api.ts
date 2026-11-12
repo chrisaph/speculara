@@ -1,5 +1,13 @@
 const API = (import.meta.env?.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 
+export async function importMetrics(analysis:unknown,file:File) {
+  const body=new FormData();body.append('analysis',JSON.stringify(analysis));body.append('file',file)
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000)
+  try { const res=await fetch(`${API}/api/metrics`,{method:'POST',body,signal:controller.signal});const data=await res.json();if(!res.ok)throw new Error(typeof data.detail==='string'?data.detail:'Could not import these metrics.');return data }
+  catch(e) { if(controller.signal.aborted)throw new Error('The metric import timed out. Try a smaller file.');throw e }
+  finally { clearTimeout(timer) }
+}
+
 export async function api<T = any>(path: string, body?: unknown, options: { timeoutMs?: number; signal?: AbortSignal } = {}): Promise<T> {
   const controller = new AbortController()
   const forwardAbort = () => controller.abort()

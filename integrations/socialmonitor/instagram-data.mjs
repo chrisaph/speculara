@@ -27,12 +27,17 @@ export function timelinePosts(payload, handle) {
       media_type: raw.media_type,
       display_url: raw.display_url || raw.image_versions2?.candidates?.[0]?.url,
       thumbnail_src: raw.thumbnail_src,
-      video_view_count: raw.video_view_count ?? raw.view_count ?? raw.play_count,
+      video_view_count: raw.video_view_count ?? raw.view_count ?? raw.ig_play_count ?? raw.play_count ?? raw.video_play_count,
+      share_count: raw.share_count,
+      save_count: raw.save_count ?? raw.saved_count,
       edge_liked_by: raw.edge_liked_by || { count: raw.like_count },
       edge_media_preview_like: raw.edge_media_preview_like,
       edge_media_to_comment: raw.edge_media_to_comment || { count: raw.comment_count },
       edge_media_to_caption: raw.edge_media_to_caption || { edges: [{ node: { text: raw.caption?.text || '' } }] },
     }
+    // A later payload can omit a metric supplied by an earlier response.
+    const previous=posts.get(post.id)
+    if (previous) for (const key of ['video_view_count','share_count','save_count']) post[key] ??= previous[key]
     posts.set(post.id, post)
   }
   const walk = (value, depth = 0) => {

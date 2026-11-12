@@ -9,11 +9,12 @@ The files in `vendor/collect/` and `vendor/types.ts` are copied from
 `LICENSE`. No upstream dashboard, branding assets, AI provider, or SQLite store
 is bundled. `vendor/db.ts` is a Speculara adapter exporting only `DATA_DIR`,
 which is the browser helper's sole database-module dependency. The collector
-source files are unchanged except `collect/instagram.ts`: Speculara captures the
+source files are unchanged except `collect/instagram.ts` and the optional `saves` field in `types.ts`: Speculara captures the
 normal profile feed and embedded Relay data before trying the legacy profile
 endpoint, which can return HTTP 404. `instagram-data.mjs` maps current and legacy
 timeline records into the upstream format. If comment retrieval fails, observed
 post metrics are retained and further comment requests stop for that run.
+The adapter also preserves supplied Instagram play/share/save counts across sparse feed payloads. Missing counts remain unknown; no extra private-insights endpoint is assumed.
 
 `worker.mjs` adapts those collectors to a line-delimited JSON stdin/stdout protocol with progress events and graceful finish/cancel controls. Python
 starts it without a shell. Browser cookies stay in `backend/.socialmonitor/`,

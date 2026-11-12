@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from .schemas import Post
 
-ANALYSIS_VERSION = 4
+ANALYSIS_VERSION = 5
 
 
 def safe_url(value) -> str:
@@ -24,7 +24,7 @@ def build_evidence(posts: list[Post]) -> dict:
                           "caption": post.caption, "url": url,
                           "likes": post.likes, "comments": post.comments, "shares": post.shares,
                           "views": post.views, "saves": post.saves, "sales": post.sales,
-                          "unavailable_metrics": post.unavailable_metrics})
+                          "unavailable_metrics": post.unavailable_metrics, "metric_sources": post.metric_sources})
         samples = [c.model_dump() for c in post.comment_evidence] or [{"text": text} for text in post.comments_sample]
         for index, comment in enumerate(samples):
             if not comment.get("text"):
