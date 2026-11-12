@@ -13,7 +13,7 @@
     "collector:login": "node integrations/socialmonitor/worker.mjs login",
     "collector:test": "node --test integrations/socialmonitor/worker.test.mjs",
     "test:api": "node --test tests/api.test.mjs",
-    "test:analysis": "node --test tests/analysis-panels.test.mjs"
+    "test:analysis": "node --test tests/analysis-panels.test.mjs tests/insight-panels.test.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

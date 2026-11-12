@@ -21,12 +21,12 @@ class Post(BaseModel):
     type: str = "Photo"  # Video | Photo | Carousel | Text | Reel
     posted_at: datetime
     caption: str = ""
-    likes: int = 0
-    comments: int = 0
-    shares: int = 0
-    saves: int = 0
-    views: int = 0
-    sales: int = 0
+    likes: int = Field(default=0, ge=0)
+    comments: int = Field(default=0, ge=0)
+    shares: int = Field(default=0, ge=0)
+    saves: int = Field(default=0, ge=0)
+    views: int = Field(default=0, ge=0)
+    sales: int = Field(default=0, ge=0)
     comments_sample: list[str] = Field(default_factory=list)
     unavailable_metrics: list[str] = Field(default_factory=list)
     url: str = ""

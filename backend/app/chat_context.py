@@ -10,8 +10,18 @@ def build_chat_context(analysis: dict) -> dict:
         return analysis
     if "facts" not in analysis:
         analysis = {"facts": analysis}
-    keys = ("profile", "post_count", "date_range", "facts", "demand", "predict", "recommend", "charts", "correlation")
+    keys = ("profile", "post_count", "date_range", "metric_availability", "facts", "demand", "predict", "recommend", "charts", "correlation")
     context = {key: analysis[key] for key in keys if key in analysis}
+    # Evidence already carries post text and metrics. Avoid repeating full post
+    # records in every chart, comparison and overlapping historical window.
+    if 'charts' in context:
+        context['charts'] = {key: {k:v for k,v in value.items() if k != 'posts'} if isinstance(value,dict) else value for key,value in context['charts'].items()}
+    if 'recommend' in context:
+        rec = context['recommend']
+        context['recommend'] = {**rec, 'comparisons': {pid: [{k:v for k,v in row.items() if k not in ('title','url')} for row in rows[:6]] for pid,rows in rec.get('comparisons',{}).items()}}
+    if 'predict' in context:
+        pred = context['predict']
+        context['predict'] = {**pred, 'similar_windows': [{**w, 'post_ids': [p['id'] for p in w.get('posts',[])], 'posts': []} for w in pred.get('similar_windows',[])]}
     sentiment = analysis.get("sentiment") or {}
     context["sentiment"] = {key: value for key, value in sentiment.items() if key != "samples"}
     context["context_version"] = 1
@@ -44,7 +54,7 @@ def build_chat_context(analysis: dict) -> dict:
 
 def cited_sources(answer: str, context: dict) -> list[dict]:
     sources, seen = [], set()
-    for reference in re.findall(r"\[([PC]\d+)\]", answer):
+    for reference in re.findall(r"\[([PCW]\d+)\]", answer):
         source = context.get("source_index", {}).get(reference)
         if source and safe_url(source.get("url")) and source["url"] not in seen:
             sources.append(source)

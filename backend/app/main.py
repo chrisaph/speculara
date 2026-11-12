@@ -15,6 +15,7 @@ from .sample import sample_posts
 from .schemas import AnalyzeRequest, ChatRequest, CollectorLoginRequest
 from .evidence import ANALYSIS_VERSION, restore_posts
 from .chat_context import build_chat_context, cited_sources
+from .strategy import generate_strategy
 
 log = logging.getLogger("speculara")
 s = get_settings()
@@ -60,7 +61,7 @@ async def analyze(req: AnalyzeRequest):
         raise HTTPException(422, str(e))
 
     saved = _analysis_cache.get(handle)
-    if not req.refresh and saved and monotonic() - saved[0] < 6 * 3600:
+    if not req.refresh and saved and saved[1].get('analysis_version') == ANALYSIS_VERSION and monotonic() - saved[0] < 6 * 3600:
         return {**saved[1], "cached": True}
     if collector.status()["login_open"]:
         raise HTTPException(409, "Finish signing in, then click Done signing in before analyzing.")
@@ -147,9 +148,16 @@ async def upload(file: UploadFile = File(...)):
     try:
         posts = analytics.posts_from_file(content, file.filename or "")
         result = analytics.analyze(posts)
-    except ValueError as e:
+    except (ValueError, TypeError, OverflowError) as e:
         raise HTTPException(422, str(e))
     return {"analysis_id": None, "cached": False, "profile": {"platform": "Upload", "handle": file.filename}, **result}
+
+
+@app.post('/api/strategy')
+async def strategy(req: ChatRequest):
+    if not req.analysis or not req.analysis.get('evidence', {}).get('posts'):
+        raise HTTPException(422, 'Run an analysis first.')
+    return await generate_strategy(req.analysis)
 
 
 @app.post("/api/chat")
@@ -184,7 +192,9 @@ async def chat(req: ChatRequest):
 def _fallback_answer(q: str, f: dict) -> str:
     q = q.lower()
     if re.search(r"longev|last|trend", q) and all(k in f for k in ("phase", "weeks", "similar")):
-        return f"The trend is {f['phase'].lower()} and should last about {f['weeks']} more weeks, based on {f['similar']} similar past trends."
+        if f['weeks'] is None:
+            return f"The observed trend is {f['phase'].lower()}. No completed comparable historical windows support an estimate of remaining weeks."
+        return f"The observed trend is {f['phase'].lower()}. The estimate is about {f['weeks']} more weeks from matching windows within this profile, not global trends."
     if re.search(r"keyword|word|comment", q) and f.get("keywords"):
         return f"The top keyword is \"{f['keywords'][0]['w']}\" with {f['keywords'][0]['n']} mentions."
     if re.search(r"sentiment|feel", q) and all(k in f for k in ("pos", "neu", "neg")):
@@ -197,13 +207,14 @@ def _fallback_answer(q: str, f: dict) -> str:
 
 
 @app.get("/api/history")
-def history():
-    return {"items": db.recent()}
+async def history():
+    rows = await _optional_storage(db.recent)
+    return {"items": rows or [], "storage_available": db.enabled() and rows is not None}
 
 
 @app.get("/api/analyses/{analysis_id}")
-def get_one(analysis_id: str):
-    row = db.get_analysis(analysis_id)
+async def get_one(analysis_id: str):
+    row = await _optional_storage(db.get_analysis, analysis_id)
     if not row:
         raise HTTPException(404, "Not found")
     return _row_response(row) or {"analysis_id": row["id"], "profile": row["profile"], **row["result"]}

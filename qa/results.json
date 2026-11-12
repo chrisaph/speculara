@@ -1,0 +1,431 @@
+[
+  {
+    "id": "DAT-01",
+    "module": "Data provenance",
+    "test": "Analyze a non-demo dataset. All six panels must use only that result, with no seeded mock fallback.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: four panels still generate demo series or items."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Exact dataset lookup; no mock generators. All-panel render checks pass."
+    }
+  },
+  {
+    "id": "PRE-01",
+    "module": "Prediction",
+    "test": "Switch forecast metrics. Dates, values and bands must match the backend metric selected.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: random fixed 2025 series ignores backend forecast."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Metric-specific history/forecast and numeric-value render tests pass."
+    }
+  },
+  {
+    "id": "PRE-02",
+    "module": "Prediction",
+    "test": "Analyze posts with unavailable views/saves/sales. Show unavailable rather than a fabricated forecast.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: missing metrics still display a seeded forecast."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Known-input test: unavailable views have no history or forecast."
+    }
+  },
+  {
+    "id": "PRE-03",
+    "module": "Prediction",
+    "test": "Report forecast accuracy only from held-out observations. Explain its basis and insufficient history.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Analytics audit: fitted residuals labeled accuracy, clipped to 40–97%."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Holdout train/test dates and separate forecasts verified."
+    }
+  },
+  {
+    "id": "PRE-04",
+    "module": "Prediction",
+    "test": "Forecast reminder control must perform a real supported action and not falsely claim scheduling.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: button only toggles local text to Reminder set."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Replaced false reminder with a real forecast CSV download link."
+    }
+  },
+  {
+    "id": "TRE-01",
+    "module": "Trend longevity",
+    "test": "Open Similar trends. Show actual matching historical windows, dates, post titles and source links.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: count has no clickable evidence or matching windows."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Historical window dates, actual post IDs and links verified."
+    }
+  },
+  {
+    "id": "TRE-02",
+    "module": "Trend longevity",
+    "test": "Explain the trend, current metric, historical scope and missing evidence without claiming global research.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Documentation claims social media as a whole without that data."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Profile-only scope and unsupported-duration empty state verified."
+    }
+  },
+  {
+    "id": "REC-01",
+    "module": "Recommendations",
+    "test": "Select a collected post or paste its URL. Find compares it to other collected posts using linked titles.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: Item A/B placeholders and no post selector."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Real titles, linked sources and collected-URL selector tests pass."
+    }
+  },
+  {
+    "id": "REC-02",
+    "module": "Recommendations",
+    "test": "Similarity reflects caption, comment text and observed metric patterns. Changing the selected post updates ranking.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: rankings are seeded percentages, not comparisons."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Known caption/comment patterns rank the correct matching posts."
+    }
+  },
+  {
+    "id": "REC-03",
+    "module": "Recommendations",
+    "test": "Generate strategy with Gemma using statistics and online references. Identify sources and any fallback.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: hard-coded plays and invented reach lift percentages."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Pipeline/citations pass mocked tests. Live reference fetch passes. See LLM-02."
+    }
+  },
+  {
+    "id": "REC-04",
+    "module": "Recommendations",
+    "test": "Analyze eight posts whose captions are only stop words. Analysis must not crash.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Reproduced: ValueError empty vocabulary in TF-IDF."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Five empty-vocabulary variants complete without a crash."
+    }
+  },
+  {
+    "id": "CHA-01",
+    "module": "Charts",
+    "test": "Trend line includes actual numeric values, period labels and the selected metric.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: line has no numeric axis or values."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Actual values, numeric axis, dates and accessible value table verified."
+    }
+  },
+  {
+    "id": "CHA-02",
+    "module": "Charts",
+    "test": "Bar values must equal metric totals for each displayed period, with readable labels.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: values scaled to rounded axis maximum, altering totals."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Known-input totals reconcile exactly across periods and posts."
+    }
+  },
+  {
+    "id": "CHA-03",
+    "module": "Charts",
+    "test": "Post comparison bars show post titles on hover/focus and source links, with a post dropdown.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: no per-post comparison or post selector."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Post dropdown, title tooltips and source links render correctly."
+    }
+  },
+  {
+    "id": "CHA-04",
+    "module": "Charts",
+    "test": "Pie comparison includes every post and correct metric shares, including more than three groups.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: first three types only; post comparison absent."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "All five fixture posts appear; metric shares sum to 100%."
+    }
+  },
+  {
+    "id": "COR-01",
+    "module": "Correlation",
+    "test": "Use oppositely ranked likes/comments. Both pair and matrix must report Spearman −1, not +1.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Reproduced: pair returns +1 because abs() removes the sign."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Known opposite ranks now return -1 in both pair and matrix."
+    }
+  },
+  {
+    "id": "COR-02",
+    "module": "Correlation",
+    "test": "Matrix and scatter use collected values and available metric names, with no Recommended pseudo-metric.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: matrix and scatter are random demo values."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Matrix and scatter use the same observed values and metric names."
+    }
+  },
+  {
+    "id": "COR-03",
+    "module": "Correlation",
+    "test": "Negative only and Strong only filters update the relationship list as well as the matrix.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: filters apply only to matrix cells."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Negative/strong filters update the tested pair list and matrix."
+    }
+  },
+  {
+    "id": "COR-04",
+    "module": "Correlation",
+    "test": "Exclude unavailable/constant metrics; explain insufficient pairs instead of drawing synthetic points.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: UI always draws six metrics and synthetic scatter."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Missing/constant metrics excluded. Empty render state verified."
+    }
+  },
+  {
+    "id": "SEN-01",
+    "module": "Sentiment",
+    "test": "Render collected keywords and comments that contain no demo keyword. Empty results remain readable.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Panel regression tests pass for real keywords and empty data."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Real-keyword and empty-data render regression tests still pass."
+    }
+  },
+  {
+    "id": "SEN-02",
+    "module": "Sentiment",
+    "test": "Each comment has a safe source. Parent-post fallback is explicitly labeled when no direct URL exists.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Evidence and rendered source-link tests pass."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Safe direct/parent source-link regression tests still pass."
+    }
+  },
+  {
+    "id": "SEN-03",
+    "module": "Sentiment",
+    "test": "When no comments were returned, clearly label caption sentiment rather than audience sentiment.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Backend caption-basis regression test passes."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Caption-only basis remains explicit in data and rendered text."
+    }
+  },
+  {
+    "id": "DEM-01",
+    "module": "Demand",
+    "test": "Weekly/monthly demand bars show complete dates and numeric counts below/above the corresponding bars.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Render audit: full dates and count labels already present."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Full date and count labels retained in rendered demand charts."
+    }
+  },
+  {
+    "id": "DEM-02",
+    "module": "Demand",
+    "test": "Count questions and requests from sampled comments even without sales/views. Distinct-comment rate must not double count.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Backend known-input inquiry and request tests pass."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Known question/request counts and distinct-comment rate pass."
+    }
+  },
+  {
+    "id": "IMP-01",
+    "module": "Upload",
+    "test": "Import a CSV without views/sales/saves. Track absent columns as unavailable; do not estimate views.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: absent columns become zero and views may be invented."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Absent CSV metric columns marked unavailable; no estimated views."
+    }
+  },
+  {
+    "id": "IMP-02",
+    "module": "Upload",
+    "test": "Import post URLs and reject negative metrics. Preserve links in evidence and comparisons.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Code audit: upload drops URLs and permits negative counts."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "CSV URL preservation and negative-count rejection tests pass."
+    }
+  },
+  {
+    "id": "API-01",
+    "module": "API and collector",
+    "test": "Reject malformed/unsupported profiles; keep collector cancellation, login and request timeouts functional.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Existing API and collector regression suites pass."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Existing validation, timeout, login and cancellation tests pass."
+    }
+  },
+  {
+    "id": "API-02",
+    "module": "Optional storage",
+    "test": "Storage failure must not break health/history or core analysis. Return an explicit availability state.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Live /api/history returned HTTP 500 on baseline."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Storage failure test returns 200 with explicit unavailable state."
+    }
+  },
+  {
+    "id": "LLM-01",
+    "module": "Gemma evidence",
+    "test": "Send complete bounded JSON containing demand, sentiment and post/comment evidence; accept only supplied citation URLs.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Payload and source-validation regression tests pass."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Whole JSON, evidence coverage and allowlisted citation tests pass."
+    }
+  },
+  {
+    "id": "LLM-02",
+    "module": "Live Gemma",
+    "test": "Obtain a real response from configured Google Gemma service and verify strategy citations.",
+    "before": {
+      "result": "Blocked",
+      "remarks": "Google returned HTTP 500 in live check; fallback is not a model pass."
+    },
+    "after": {
+      "result": "Blocked",
+      "remarks": "Live Google returned quota/rate-limit error. No real model success claimed."
+    }
+  },
+  {
+    "id": "UX-01",
+    "module": "Visual QA",
+    "test": "Navigate six panels and verify neomorphic controls, readable labels and no blank sentiment panel in Chrome.",
+    "before": {
+      "result": "Blocked",
+      "remarks": "Initial browser check blocked by private active tab; visual retest pending."
+    },
+    "after": {
+      "result": "Blocked",
+      "remarks": "Markup tests pass; native browser connection lost. Interactive QA unverified."
+    }
+  },
+  {
+    "id": "SEC-01",
+    "module": "Source safety",
+    "test": "Keep API keys and browser cookies out of Git and client build; reject unsafe evidence URLs.",
+    "before": {
+      "result": "Pass",
+      "remarks": "Ignored secrets/session paths and source URL regression checks pass."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Secret/session ignores retained; unsafe source URLs rejected."
+    }
+  },
+  {
+    "id": "SEC-02",
+    "module": "Private local storage",
+    "test": "The Vite server must refuse HTTP access to collector browser storage. Exclude that folder from frontend file watching.",
+    "before": {
+      "result": "Issue",
+      "remarks": "Harmless marker in collector storage was served with HTTP 200."
+    },
+    "after": {
+      "result": "Pass",
+      "remarks": "Same marker probe returns HTTP 403 after deny rules; watcher excludes backend."
+    }
+  }
+]

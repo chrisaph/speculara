@@ -6,7 +6,7 @@ import { sentimentView, sourceHref } from '../src/analysis.ts'
 
 let server, panels
 before(async () => {
-  server = await createServer({ configFile: false, plugins: [react()], server: { middlewareMode: true }, appType: 'custom' })
+  server = await createServer({ configFile: false, plugins: [react()], optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, ws: false, watch: null }, appType: 'custom' })
   panels = await server.ssrLoadModule('/tests/render-panels.tsx')
 })
 after(async () => { await server?.close() })

@@ -28,7 +28,8 @@ def test_sample_shape():
     j = c.get("/api/sample").json()
     f = j["facts"]
     assert f["pos"] + f["neg"] + f["neu"] == 100
-    assert f["phase"] in ("Rising", "Peaking", "Declining") and 1 <= f["weeks"] <= 12
+    assert f["phase"] in ("Rising", "Peaking", "Declining")
+    assert f["weeks"] is None or f["weeks"] >= 1
     assert len(f["keywords"]) > 0 and len(f["pairs"]) > 0 and f["counts"]["Views"] > 0
     assert len(j["predict"]["forecast"]) == 8 and j["recommend"]["actions"]
 

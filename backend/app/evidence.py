@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from .schemas import Post
 
-ANALYSIS_VERSION = 3
+ANALYSIS_VERSION = 4
 
 
 def safe_url(value) -> str:

@@ -85,4 +85,16 @@ Gemma receives the analysis sections, data-quality notes, and bounded post/comme
 
 Sentiment uses collected comment text when available, otherwise explicitly labeled caption sentiment. Empty data produces an explanatory state. Demand measures questions and requests in sampled comments, independently of unavailable views, saves, or sales. Source buttons link to an exact comment URL when supplied by the collector; otherwise they explicitly link to the parent post or reel. Demo data has no external source links.
 
-Saved analyses with stored posts are upgraded to the current evidence format when loaded. Refresh the frontend and run the analysis again to replace an older result still held in the browser. Run `npm.cmd run test:analysis` for panel rendering and evidence-filter checks.
+All six panels use the active analysis. Prediction has a separate observed history and eight-week forecast per metric. Accuracy is measured with a separate two-to-four-week holdout, not fitted training residuals. Forecast bands are approximate error bands. Missing metrics never receive estimated view counts. Trend longevity compares four-week patterns within the collected profile; its evidence dialog lists matching dates and source posts. Unfinished matches do not produce a duration estimate.
+
+Recommendations compare the chosen collected post with others using caption TF-IDF (50%), sampled-comment TF-IDF (30%), and normalized observed metric-pattern cosine similarity (20%). Empty text contributes zero, and metric comparisons use columns observed on all posts. These scores are similarities, not purchase or reach probabilities. A pasted post URL must match a post already in the analysis.
+
+Charts show exact observed totals, date labels, per-post title/source comparisons and all-post metric shares. Correlations preserve the sign of Spearman coefficients and use pairwise observed values with at least three varying records. The matrix, filters and scatter share the same real metric pairs.
+
+`POST /api/strategy` accepts the same analysis payload as chat. It retrieves an allowlisted official platform reference and sends that text plus statistics to Gemma. References include retrieval timestamps and source IDs. This is a reference lookup, not a general search engine. Windows system certificates are trusted through Python's default SSL context; TLS verification remains enabled. When Google rejects a request or references are unreachable, the UI labels the statistics fallback and missing research. No uplift percentages are invented.
+
+CSV/Excel uploads preserve `url` or `post_url` and mark absent metric columns as unavailable. Negative metrics are rejected. Analysis format version 4 regenerates old saved results from stored posts. The optional history endpoint returns its storage availability rather than failing the app when Supabase is unavailable.
+
+Vite denies web access to `.socialmonitor` browser storage and `.venv` paths. It excludes backend, temporary QA and workbook-output folders from frontend file watching so locked Chrome session files cannot interrupt the frontend watcher.
+
+Saved analyses with stored posts are upgraded to the current evidence format when loaded. Refresh the frontend and run the analysis again to replace an older result still held in the browser. Run `npm.cmd run test:analysis` for all six panels, numeric reconciliation, filters, safe URLs and evidence checks. The before/after QA workbooks and their case results are in `outputs/speculara-qa-20261112` and `qa`.

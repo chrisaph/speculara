@@ -23,7 +23,10 @@ def _client():
 
 
 def enabled() -> bool:
-    return _client() is not None
+    try:
+        return _client() is not None
+    except Exception:
+        return False
 
 
 def save_analysis(url: str, platform: str, handle: str, profile: dict, posts: list[dict], result: dict) -> Optional[str]:
