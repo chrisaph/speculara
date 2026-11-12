@@ -24,54 +24,63 @@ def availability(df):
 def _fit(y, horizon, method='damped'):
     if method=='last': return np.repeat(y[-1],horizon)
     if method=='mean': return np.repeat(np.mean(y[-4:]),horizon)
+    if method=='median': return np.repeat(np.median(y[-5:]),horizon)
+    if method=='average': return np.repeat(np.mean(y),horizon)
     fitted=ExponentialSmoothing(y,trend='add',damped_trend=True,initialization_method='estimated').fit(optimized=True)
     if fitted.mle_retvals is not None and not fitted.mle_retvals.get('success',True):
         raise ValueError('Smoothing model did not converge')
     return np.asarray(fitted.forecast(horizon))
 
 
-def _choose_model(train):
-    # Model selection sees training weeks only, never the final holdout.
-    origins=list(range(max(4,len(train)-4),len(train)))
-    methods=['last','mean','damped'] if origins else ['last','mean']
-    if not origins: origins=list(range(max(2,len(train)-2),len(train)))
+def _choose_model(train, horizon=1):
+    # Evaluate the same multi-step task as the final holdout, using training only.
+    origins=list(range(2,len(train)-horizon+1))[-4:]
+    methods=['mean','median','average','last']
+    if origins and min(origins)>=4: methods.append('damped')
     losses={}
     for method in methods:
         try:
-            errors=[abs(float(train[i])-float(_fit(train[:i],1,method)[0])) for i in origins]
+            errors=[float(np.abs(train[i:i+horizon]-np.maximum(0,_fit(train[:i],horizon,method))).mean()) for i in origins]
             if errors and np.all(np.isfinite(errors)): losses[method]=np.mean(errors)
         except (ValueError,ArithmeticError): continue
-    return min(losses,key=losses.get) if losses else 'last'
+    return min(losses,key=losses.get) if losses else 'mean'
 
 
-def _forecast(df, metric, horizon, as_of=None):
+def _forecast(df, metric, horizon, as_of=None, basis='week'):
     rows = known(df, metric)
-    empty = {'metric': metric, 'history': [], 'forecast': [], 'accuracy': None,
+    empty = {'metric': metric, 'basis':basis, 'history': [], 'forecast': [], 'accuracy': None,
              'validation': {'method': 'Held-out weighted absolute percentage error', 'test_weeks': 0},
              'reason': f'No observed {metric} values were supplied.'}
     if not len(rows):
         return empty
-    weekly = rows.set_index('posted_at')[metric].resample('W').sum()
-    today=pd.Timestamp(as_of).normalize() if as_of is not None else pd.Timestamp.now(tz='UTC').tz_localize(None).normalize()
-    partial=weekly[weekly.index>=today]
-    weekly=weekly[weekly.index<today]
+    now=pd.Timestamp(as_of) if as_of is not None else pd.Timestamp.now(tz='UTC').tz_localize(None)
+    today=now.normalize()
+    if basis=='post':
+        observed=rows[rows.posted_at<=now].sort_values('posted_at',kind='stable')
+        weekly=pd.Series(observed[metric].to_numpy(dtype=float),index=observed.posted_at)
+        partial=pd.Series(dtype=float)
+    else:
+        weekly = rows.set_index('posted_at')[metric].resample('W').sum()
+        partial=weekly[weekly.index>=today]
+        weekly=weekly[weekly.index<today]
     y = weekly.to_numpy(dtype=float)
     history = [{'date': d.strftime('%Y-%m-%d'), 'value': int(v)} for d, v in weekly.items()]
-    result = {**empty, 'history': history, 'reason': '', 'coverage': f'{len(rows)} of {len(df)} posts have this metric.',
+    result = {**empty, 'history': history, 'reason': '', 'basis':basis,
+              'coverage': f'{len(rows)} of {len(df)} posts have this metric.',
               'partial_weeks':[{'date':d.strftime('%Y-%m-%d'),'value':int(v)} for d,v in partial.items()]}
     if len(y) < 6 or not np.any(y):
-        result['reason'] = 'At least six completed weekly observations with a non-zero total are needed for a forecast.'
+        result['reason'] = ('At least six dated posts' if basis=='post' else 'At least six completed weekly observations')+' with a non-zero total are needed for a forecast.'
         return result
     try:
         # A separate holdout fit prevents training data from becoming claimed accuracy.
         ntest = max(2, min(4, len(y) // 4))
         test = y[-ntest:]
-        method=_choose_model(y[:-ntest])
+        method=_choose_model(y[:-ntest],ntest)
         try:
             fc = np.maximum(0, _fit(y,horizon,method))
             validation = np.maximum(0, _fit(y[:-ntest],ntest,method))
         except (ValueError,ArithmeticError):
-            method='last'  # A numerical fit failure must not break a usable baseline.
+            method='mean'  # Keep a usable baseline if a numerical fit fails.
             fc=np.maximum(0,_fit(y,horizon,method));validation=np.maximum(0,_fit(y[:-ntest],ntest,method))
         if not np.isfinite(fc).all() or not np.isfinite(validation).all(): raise ValueError('Non-finite forecast')
         denom = float(np.abs(test).sum())
@@ -80,16 +89,22 @@ def _forecast(df, metric, horizon, as_of=None):
         accuracy = round(max(0,100-wape)) if wape is not None else None
         error = float(np.sqrt(np.mean((test-validation)**2)))
         result['accuracy'] = accuracy
-        result['validation'].update(test_weeks=ntest, train_weeks=len(y)-ntest,
+        result['validation'].update(test_weeks=ntest if basis=='week' else 0,
+                                    test_posts=ntest if basis=='post' else 0,
+                                    train_observations=len(y)-ntest, train_weeks=len(y)-ntest if basis=='week' else 0,
                                     start=weekly.index[-ntest].strftime('%Y-%m-%d'), end=weekly.index[-1].strftime('%Y-%m-%d'),
                                     weighted_error_pct=round(wape,1) if wape is not None else None,
                                     absolute_error=round(absolute_error,1),actual_total=int(denom),
                                     observations=[{'date':weekly.index[-ntest+i].strftime('%Y-%m-%d'),'actual':int(v),'predicted':round(float(validation[i]))} for i,v in enumerate(test)])
-        result['model']={'last':'Last observed week','mean':'Recent four-week average','damped':'Damped exponential smoothing'}[method]
-        result['validation']['selection']='Rolling validation within training weeks only; final holdout excluded from model selection.'
+        unit='posts' if basis=='post' else 'weeks'
+        result['model']={'last':'Last observed value','mean':f'Recent four-{unit[:-1]} average','median':f'Recent five-{unit[:-1]} median','average':'Training-history average','damped':'Damped exponential smoothing'}[method]
+        baseline=_fit(y[:-ntest],ntest,'mean')
+        result['validation']['baseline_weighted_error_pct']=round(100*float(np.abs(test-baseline).sum())/denom,1) if denom else None
+        result['validation']['baseline_model']=f'Recent four-{unit[:-1]} average'
+        result['validation']['selection']='Rolling multi-step validation on training data using the holdout horizon; final holdout excluded from model selection.'
         for i, v in enumerate(fc, 1):
             band = 1.64 * error * np.sqrt(i)
-            result['forecast'].append({'date': (weekly.index[-1]+pd.Timedelta(weeks=i)).strftime('%Y-%m-%d'),
+            result['forecast'].append({'date': f'Next post {i}' if basis=='post' else (weekly.index[-1]+pd.Timedelta(weeks=i)).strftime('%Y-%m-%d'),
                                        'value': round(float(v)), 'low': max(0, round(float(v-band))),
                                        'high': max(0, round(float(v+band)))})
     except (ValueError, ArithmeticError):
@@ -98,10 +113,11 @@ def _forecast(df, metric, horizon, as_of=None):
 
 
 def predict(df, horizon_weeks=8):
-    metrics = {m: _forecast(df, m, horizon_weeks) for m in METRICS}
+    metrics = {m: _forecast(df, m, horizon_weeks,basis='post') for m in METRICS}
+    weekly_metrics = {m: _forecast(df, m, horizon_weeks) for m in METRICS}
     metric = max(['views','likes','comments'],key=lambda m: len(known(df,m)))
     primary = metrics[metric]
-    history = primary['history']
+    history = weekly_metrics[metric]['history']
     y = np.array([r['value'] for r in history], dtype=float)
     recent = float(y[-3:].mean()) if len(y) else 0
     prior = float(y[-6:-3].mean()) if len(y) >= 6 else 0
@@ -127,7 +143,7 @@ def predict(df, horizon_weeks=8):
                             'posts': [{'id': r.id, 'title': r.caption or f'{r.type} {r.id}', 'url': r.url, 'type': r.type} for r in posts.itertuples()]})
     finished = [w['weeks_observed_after'] for w in windows if not w['censored']]
     weeks = max(1, round(float(np.median(finished)))) if finished else None
-    return {**primary, 'metrics': metrics, 'phase': phase, 'growth': growth, 'weeks_left': weeks,
+    return {**primary, 'metrics': metrics, 'weekly_metrics':weekly_metrics, 'phase': phase, 'growth': growth, 'weeks_left': weeks,
             'similar': len(windows), 'similar_windows': windows, 'trend_metric': metric,
             'trend_scope': 'Matching four-week patterns within this profile only. Overlapping windows are not independent trends.',
             'longevity_note': 'Median observed weeks until matching windows dropped below 80% of their peak. Unfinished windows are excluded.' if finished else 'No completed comparable window supports a remaining-duration estimate.'}

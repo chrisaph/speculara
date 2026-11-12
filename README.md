@@ -20,6 +20,8 @@ Gemma keys remain in ignored `backend/.env`. Supabase is optional. Profile colle
 
 Use **Analyze CSV / Excel data** to demonstrate the supplied 40 fictional posts. Collected profiles request 5-50 recent posts and retain only observed metrics. Source buttons require genuine supplied URLs.
 
+Prediction now defaults to **Per post**, with **Weekly totals** as a separate view. It shows raw held-out error and baseline comparison. See [forecast correction notes](qa/forecast-fix-20261112.md) for the change since the original demo package.
+
 ## Checks
 
 From the repository root run `npm.cmd run collector:test`, `npm.cmd run test:api`, `npm.cmd run test:analysis`, `npx.cmd tsc --noEmit` and `npm.cmd run build`. From `backend`, run `.venv/Scripts/python.exe -m pytest -q`.

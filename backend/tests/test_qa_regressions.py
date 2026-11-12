@@ -71,8 +71,9 @@ def test_forecast_uses_separate_holdout_and_metric_values():
     for metric in ['likes','comments','views']:
         f=result['metrics'][metric]
         assert len(f['history'])==16 and len(f['forecast'])==8
-        assert f['validation']['train_weeks']+f['validation']['test_weeks']==16
-        assert f['validation']['test_weeks']>=2
+        assert f['basis']=='post'
+        assert f['validation']['train_observations']+f['validation']['test_posts']==16
+        assert f['validation']['test_posts']>=2
         assert f['history'][0]['value']==getattr(posts(16)[0],metric)
         assert all(r['low']<=r['value']<=r['high'] for r in f['forecast'])
     assert result['metrics']['views']['forecast'][0]['value'] > result['metrics']['likes']['forecast'][0]['value']
