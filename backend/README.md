@@ -52,6 +52,8 @@ Supabase is optional: omit both Supabase exports to run without saving results. 
 
 Leave the backend running. In a second terminal, from the `speculara` directory:
 
+On Windows, start the backend from a terminal under your normal desktop account. A backend started under an automation sandbox account can report a successful sign-in browser launch while placing that browser on a different desktop. If the sign-in window is invisible, finish the existing collector session, stop that backend, and restart it from your own terminal using the command above. A healthy `/api/health` response does not verify desktop visibility. Supabase availability is unrelated to opening the sign-in window.
+
 ```bash
 npm.cmd install
 export VITE_API_URL="http://localhost:8000"
