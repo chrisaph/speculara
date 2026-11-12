@@ -11,11 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import analytics, db, collector
 from .config import get_settings
-from .llm import chat_answer
+from .llm import chat_answer, LLMUnavailable
 from .sample import sample_posts
 from .schemas import AnalyzeRequest, ChatRequest, CollectorLoginRequest
 from .evidence import ANALYSIS_VERSION, restore_posts
-from .chat_context import build_chat_context, cited_sources
+from .chat_context import build_chat_context, cited_sources, model_context
 from .strategy import generate_strategy
 from .metric_import import merge_metrics
 
@@ -62,7 +62,8 @@ async def analyze(req: AnalyzeRequest):
     except ValueError as e:
         raise HTTPException(422, str(e))
 
-    saved = _analysis_cache.get(handle)
+    cache_key=f'{handle}:limit:{req.post_limit}'
+    saved = _analysis_cache.get(cache_key)
     if not req.refresh and saved and saved[1].get('analysis_version') == ANALYSIS_VERSION and monotonic() - saved[0] < 6 * 3600:
         return {**saved[1], "cached": True}
     if collector.status()["login_open"]:
@@ -71,14 +72,15 @@ async def analyze(req: AnalyzeRequest):
     cached = await _optional_storage(db.find_cached, handle) if not req.refresh else None
     if cancel_version != collector.cancellation_version():
         raise HTTPException(409, "Analysis cancelled.")
-    if cached and cached.get("profile", {}).get("collector") == "socialmonitor":
+    if cached and cached.get("profile", {}).get("collector") == "socialmonitor" and cached.get('result',{}).get('requested_post_limit',20)==req.post_limit:
         restored = await asyncio.to_thread(_row_response, cached)
         if restored:
-            _analysis_cache[handle] = (monotonic(), restored)
+            restored['requested_post_limit']=req.post_limit
+            _analysis_cache[cache_key] = (monotonic(), restored)
             return {**restored, "cached": True}
 
     try:
-        profile, posts = await collector.collect_profile(url)
+        profile, posts = await collector.collect_profile(url,limit=req.post_limit)
     except collector.CollectorError as e:
         raise HTTPException(e.status_code, str(e))
     except Exception as e:
@@ -90,12 +92,13 @@ async def analyze(req: AnalyzeRequest):
         raise HTTPException(422, f"{e} {profile.notes}".strip())
 
     result["facts"]["data_quality"] = {"source": "SocialMonitor", "unavailable_metrics": profile.unavailable_metrics, "notes": profile.notes}
+    result['requested_post_limit']=req.post_limit
 
     aid = await _optional_storage(db.save_analysis, url, profile.platform, handle, profile.model_dump(), [p.model_dump(mode="json") for p in posts], result)
     response = {"analysis_id": aid, "cached": False, "profile": profile.model_dump(), **result}
     if len(_analysis_cache) >= 100:
         _analysis_cache.pop(next(iter(_analysis_cache)))
-    _analysis_cache[handle] = (monotonic(), response)
+    _analysis_cache[cache_key] = (monotonic(), response)
     return response
 
 
@@ -144,7 +147,7 @@ def sample():
 
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)):
-    content = await file.read()
+    content = await file.read(10_000_001)
     if len(content) > 10_000_000:
         raise HTTPException(413, "File too large (10 MB max).")
     try:
@@ -194,19 +197,22 @@ async def chat(req: ChatRequest):
         analysis = {"facts": req.facts}
     if not analysis:
         raise HTTPException(422, "Run an analysis first.")
-    context = build_chat_context(analysis)
+    context = model_context(analysis,question=req.message)
+    notice=''
     try:
         answer = await chat_answer(req.message, context)
         engine = "gemma"
-    except Exception:
+    except Exception as error:
+        notice=str(error) if isinstance(error,(LLMUnavailable,ValueError)) else 'Gemma is temporarily unavailable.'
         summary = analysis.get("demand", {}).get("summary", {})
         if re.search(r"demand|ask|question", req.message, re.I) and summary:
             answer = (f"The {summary.get('sampled_comments', 0)} sampled comments contain {summary.get('questions', 0)} questions "
-                      f"and {summary.get('requests', 0)} requests. These are comment-based demand signals, not sales figures.")
+                      f"and {summary.get('requests', 0)} requests. These are comment-based demand signals, not sales figures. "
+                      'More comments alone do not mean more demand; compliments and unrelated reactions are different from questions or requests.')
         else:
             answer = _fallback_answer(req.message, analysis.get("facts") or {})
         engine = "fallback"
-    return {"answer": answer, "sources": cited_sources(answer, context), "engine": engine,
+    return {"answer": answer, "sources": cited_sources(answer, context), "engine": engine, "notice":notice,
             "context": context.get("evidence_coverage", {})}
 
 

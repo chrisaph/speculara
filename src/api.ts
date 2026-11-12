@@ -1,5 +1,12 @@
 const API = (import.meta.env?.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 
+export async function uploadDataset(file:File) {
+  const body=new FormData();body.append('file',file)
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000)
+  try { const res=await fetch(`${API}/api/upload`,{method:'POST',body,signal:controller.signal});const data=await res.json();if(!res.ok)throw new Error(typeof data.detail==='string'?data.detail:'Could not analyze this file.');return data }
+  finally {clearTimeout(timer)}
+}
+
 export async function importMetrics(analysis:unknown,file:File) {
   const body=new FormData();body.append('analysis',JSON.stringify(analysis));body.append('file',file)
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000)

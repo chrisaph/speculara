@@ -1,0 +1,95 @@
+[
+  {
+    "check": "Instagram small live collection",
+    "status": 200,
+    "posts": 5,
+    "dates": [
+      "2026-10-10",
+      "2026-11-06"
+    ],
+    "coverage": {
+      "views": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      },
+      "likes": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 7431552,
+        "complete": true
+      },
+      "comments": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 179135,
+        "complete": true
+      },
+      "shares": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      },
+      "saves": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      },
+      "sales": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      }
+    },
+    "comments": 40,
+    "seconds": 43.5,
+    "detail": ""
+  },
+  {
+    "check": "Real-data strategy and official references",
+    "status": 200,
+    "engine": "gemma",
+    "notice": "",
+    "seconds": 40.5,
+    "research_status": "retrieved",
+    "sources": [
+      {
+        "id": "P5",
+        "title": "Photo source",
+        "url": "https://www.facebook.com/joanquizonmakeup/posts/pfbid0YyAXdYEVDCDYHnxhoQfNmUcQb94d3C39okWupD7VX3MBxoZBzBFStwNN4jrKdF4nl",
+        "kind": "post"
+      },
+      {
+        "id": "P4",
+        "title": "Photo source",
+        "url": "https://www.facebook.com/joanquizonmakeup/posts/pfbid02apJL8NNLM7kFafZiZFk6nwCfd2SEMzxmQ4vJPJmdDzcfunsV2RdsxGKRr9YMbVHal",
+        "kind": "post"
+      },
+      {
+        "id": "W1",
+        "title": "How Meta ranks Facebook and Instagram content",
+        "url": "https://about.fb.com/news/2023/06/how-ai-ranks-content-on-facebook-and-instagram/",
+        "kind": "web"
+      }
+    ],
+    "references": [
+      {
+        "id": "W1",
+        "title": "How Meta ranks Facebook and Instagram content",
+        "url": "https://about.fb.com/news/2023/06/how-ai-ranks-content-on-facebook-and-instagram/",
+        "retrieved_at": "2026-11-12T10:03:23.992860+00:00"
+      }
+    ],
+    "answer": "Based on the analysis of the Facebook profile \"joanquizonmakeup,\" here are three concrete next actions:\n\n1. **Develop \"Behind-the-Scenes\" Educational Content**: The post addressing what makeup artists do on weekdays achieved the highest engagement with 89 likes [P5]. I propose experimenting with a series of \"Day in the Life\" posts to see if educational transparency continues to drive higher engagement than standard portfolio photos.\n\n2. **Optimize for High-Share Storytelling**: There is a strong correlation between likes and shares (0.783) [Facts], with the Tuscany wedding post achieving the most shares (11) [P4]. I propose testing more narrative-driven captions focused on destination weddings to determine if storytelling increases the share rate compared to short descriptive captions.\n\n3. **Implement Engagement-Driven AI Ranking Strategy**: Meta utilizes AI systems to rank content based on user choices to ensure relevance [W1]. Since the account has a 0% request rate from comments [Demand], I propose experimenting with direct call-to-action questions in captions to increase meaningful interactions, which may signal relevance to the AI and improve Feed visibility [W1]."
+  }
+]

@@ -40,9 +40,9 @@ The default chat model is `gemma-4-31b-it`. Set `GEMMA_MODEL` to use another com
 
 ## Collecting real posts
 
-Paste an Instagram, Facebook or TikTok **profile** link and click Analyze. The upstream collector reads up to 20 recent posts and 8 comments per post. For Instagram comment text or Facebook collection, choose the network under the input, click **Sign in for comments**, sign in yourself in the separate browser window, then click **Done signing in** in Speculara. Closing the sign-in tab also releases the browser. The app never enters passwords. Browser state is stored in ignored `backend/.socialmonitor/` and is not sent to Gemma or Supabase.
+Paste an Instagram, Facebook or TikTok **profile** link, choose a maximum of 5, 10, 20, 30, 40 or 50 latest posts, and click Analyze. The collector retains up to 8 comment samples per post. The default is 20 posts; actual coverage depends on the platform. For Instagram comment text or Facebook collection, choose the network under the input, click **Sign in for comments**, sign in yourself in the separate browser window, then click **Done signing in** in Speculara. Closing the sign-in tab also releases the browser. The app never enters passwords. Browser state is stored in ignored `backend/.socialmonitor/` and is not sent to Gemma or Supabase.
 
-Collection displays live progress and elapsed time. **Cancel collection** requests a graceful browser shutdown. The collector has a 210-second overall deadline and the frontend request has a four-minute deadline. Optional Supabase calls run outside the request loop with five-second database timeouts; failures do not prevent displaying the analysis.
+Collection displays live progress and elapsed time. **Cancel collection** requests a graceful browser shutdown. The Python deadline is the larger of 210 seconds or 30 + 10 seconds per requested post. The frontend deadline is the larger of four minutes or 90 + 10 seconds per requested post. Optional Supabase calls run outside the request loop with five-second database timeouts; failures do not prevent displaying the analysis.
 
 Instagram may require sign-in even for public profiles. Login walls/checkpoints and platform changes can interrupt collection. At least 5 valid dated posts are needed. TikTok uses the upstream signed-out collector. Unsupported networks/individual post URLs are rejected explicitly. Use `refresh: true` with POST /api/analyze to bypass the six-hour analysis cache.
 
@@ -83,7 +83,7 @@ Results are cached per profile for 6 hours, including an in-memory cache of up t
 
 ## Analysis evidence and chat
 
-Gemma receives the analysis sections, data-quality notes, and bounded post/comment evidence (up to 40 posts and 320 comment samples). The chat shows how much evidence it can read and renders source buttons for cited evidence. It cannot read comments the collector did not return or infer private sales metrics.
+Gemma receives analysis summaries, data-quality notes and a compact evidence context of about 16,000 characters, selected from up to 50 posts and their comment samples. Repeated charts/history are removed and whole evidence records are trimmed; the response reports included and collected counts. Source buttons resolve cited IDs to actual supplied URLs. It cannot read comments the collector did not return or infer private sales metrics. Non-research generation is bounded to 130 seconds, retries one transient failure, and labels quota/timeout fallbacks.
 
 Sentiment uses collected comment text when available, otherwise explicitly labeled caption sentiment. Empty data produces an explanatory state. Demand measures questions and requests in sampled comments, independently of unavailable views, saves, or sales. Source buttons link to an exact comment URL when supplied by the collector; otherwise they explicitly link to the parent post or reel. Demo data has no external source links.
 

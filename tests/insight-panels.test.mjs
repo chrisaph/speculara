@@ -7,7 +7,7 @@ import { chartView, correlationView, resolvePost } from '../src/insights.ts'
 
 let server, render
 before(async () => {
-  server = await createServer({ configFile:false,plugins:[react()],optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true,hmr:false,ws:false,watch:null},appType:'custom' })
+  server = await createServer({ configFile:false,cacheDir:`.tmp-test-cache/insights-${process.pid}`,plugins:[react()],optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true,hmr:false,ws:false,watch:null},appType:'custom' })
   render = await server.ssrLoadModule('/tests/render-panels.tsx')
 })
 after(async () => { await server?.close() })
@@ -66,7 +66,7 @@ test('root never generates mock facts or silently connects failed sample request
 test('metric coverage distinguishes missing, zero and imported counts',()=>{
  const data={...analysis,metric_availability:{views:{known_posts:0,total:null},likes:{known_posts:5,total:100,imported_posts:2},sales:{known_posts:5,total:0,imported_posts:5}}}
  const html=render.renderCoverage(data)
- assert.match(html,/Not supplied/);assert.match(html,/2 user-imported/)
+ assert.match(html,/Not supplied/);assert.match(html,/text-ink-dark/);assert.match(html,/2 user-imported/)
  assert.match(html,/Import metrics CSV \/ Excel/);assert.match(html,/measured zero/)
  assert.doesNotMatch(html,/NaN|undefined/)
  const csv=render.metricsCSV(data)

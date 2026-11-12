@@ -79,7 +79,7 @@ export const instagram: Collector = {
     }, async () => {
       await navigateProfile(page, profile.url)
       await pause(3000, 6000)
-      if (!/\/challenge|\/accounts\/(login|suspended)/.test(page.url())) await readScroll(page, 2)
+      if (!/\/challenge|\/accounts\/(login|suspended)/.test(page.url())) await readScroll(page, Math.min(10,Math.max(2,Math.ceil(opt.limit/6))))
     })
     if (page.url().includes('/challenge') || page.url().includes('/accounts/suspended'))
       throw new Challenge('Instagram', 'a security check appeared')

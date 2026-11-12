@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { api } from './api'
+import { api, uploadDataset } from './api'
 import { PredictPanel, RecommendPanel, ChartsPanel, CorrelationPanel } from './components/InsightPanels'
 import { SentimentPanel, DemandPanel, EvidenceSources, SourceButton } from './components/AnalysisPanels'
 import { SuggestionStrip } from './components/SuggestionStrip'
@@ -25,17 +25,7 @@ const Seed = createContext('sample')
 
 /* ---------- primitives ---------- */
 function Logo({ size = 36 }: { size?: number }) {
-  const fills = [INK, SKY, INK, SKY, INK, SKY]
-  return (
-    <svg width={size} height={size} viewBox="-50 -50 100 100" aria-label="Speculara logo">
-      <circle r="48" fill={CREAM} stroke={INK} strokeWidth="3" />
-      {fills.map((f, i) => (
-        <path key={i} transform={`rotate(${i * 60})`} d="M0 -44 L26 -38 L8 -2 Z" fill={f} stroke={CREAM} strokeWidth="1.5" />
-      ))}
-      <circle r="9" fill={CREAM} stroke={INK} strokeWidth="2" />
-      <circle cx="-14" cy="-26" r="3" fill="#fff" opacity=".7" />
-    </svg>
-  )
+  return <img src="/speculara-logo.svg" width={size} height={size} alt="Speculara logo" className="object-contain" />
 }
 
 function Predict() { return <PredictPanel analysis={liveFor(useContext(Seed))} /> }
@@ -63,7 +53,7 @@ function Chat({ picked }: { picked: Key | null }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
-  type Message = { me: boolean; t: string; sources?: { id: string; title: string; url: string; kind: string }[]; engine?: string }
+  type Message = { me: boolean; t: string; sources?: { id: string; title: string; url: string; kind: string }[]; engine?: string; notice?:string; context?:{posts_in_context:number;comments_in_context:number} }
   const greeting: Message = { me: false, t: 'Ask me about the posts, collected comments, demand, sentiment, or other analysis outputs. I can cite their sources.' }
   const [msgs, setMsgs] = useState<Message[]>([greeting])
   const end = useRef<HTMLDivElement>(null)
@@ -78,10 +68,10 @@ function Chat({ picked }: { picked: Key | null }) {
         setMsgs((messages) => [...messages, { me: false, t: 'Analyze a profile or choose Try with sample data first, so I can read its results.' }])
         return
       }
-      const response = await api<{ answer: string; sources?: Message['sources']; engine?: string }>('/api/chat', {
+      const response = await api<{ answer: string; sources?: Message['sources']; engine?: string; notice?:string; context?:Message['context'] }>('/api/chat', {
         message, analysis_id: analysis.analysis_id, analysis, facts: analysis.facts,
-      }, { timeoutMs: 60000 })
-      setMsgs((messages) => [...messages, { me: false, t: response.answer, sources: response.sources, engine: response.engine }])
+      }, { timeoutMs: 150000 })
+      setMsgs((messages) => [...messages, { me: false, t: response.answer, sources: response.sources, engine: response.engine, notice:response.notice, context:response.context }])
     } catch (error) {
       setMsgs((messages) => [...messages, { me: false, t: `I couldn't finish reading the analysis: ${(error as Error).message}`, engine: 'unavailable' }])
     } finally { setSending(false) }
@@ -90,13 +80,13 @@ function Chat({ picked }: { picked: Key | null }) {
     <div className="fixed bottom-4 right-4 z-30 flex flex-col items-end gap-3">
       {open && (
         <div role="dialog" aria-label="Ask about your analysis" className="neu flex h-[min(34rem,80vh)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl sm:w-96">
-          <div className="flex items-center justify-between px-4 py-3"><div><p className="font-display font-bold text-ink">Ask Speculara</p><p className="mt-1 text-[11px] text-slate-600">{analysis ? `Reading ${analysis.post_count ?? 0} posts · ${analysis.evidence?.comments?.length ?? 0} comment samples` : 'Connect an analysis to get started'}{picked ? ` · ${META[picked].title}` : ''}</p></div>
+          <div className="flex items-center justify-between px-4 py-3"><div><p className="font-display font-bold text-ink">Ask Speculara</p><p className="mt-1 text-[11px] text-slate-600">{analysis ? `${analysis.post_count ?? 0} posts · ${analysis.evidence?.comments?.length ?? 0} collected comment samples` : 'Connect an analysis to get started'}{picked ? ` · ${META[picked].title}` : ''}</p></div>
             <button onClick={() => setOpen(false)} aria-label="Close chat" className="neu-sm grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink">&times;</button></div>
           <div className="neu-in neu-scroll mx-3 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl p-3 text-sm" aria-live="polite">
             {msgs.map((message, index) => <div key={index} className={`max-w-[95%] rounded-2xl px-3 py-3 ${message.me ? 'ml-auto bg-ink text-white' : 'neu-sm text-slate-800'}`}>
               <p className="whitespace-pre-wrap break-words leading-relaxed">{message.t}</p>
               {!!message.sources?.length && <div className="mt-3 flex flex-wrap gap-2">{message.sources.map((source) => <SourceButton key={source.id} url={source.url} kind={source.kind} label={`Source ${source.id}`} />)}</div>}
-              {message.engine && <p className="mt-2 text-[10px] text-slate-500">{message.engine === 'gemma' ? 'Gemma · using this analysis' : message.engine === 'fallback' ? 'Local data summary · Gemma unavailable' : 'Could not reach the analysis service'}</p>}
+              {message.notice&&<p className="mt-2 text-xs text-wine">{message.notice}</p>}{message.context&&<p className="mt-2 text-[10px] text-slate-500">Evidence included: {message.context.posts_in_context} posts · {message.context.comments_in_context} comment samples.</p>}{message.engine && <p className="mt-2 text-[10px] text-slate-500">{message.engine === 'gemma' ? 'Gemma · using this analysis' : message.engine === 'fallback' ? 'Local data summary · Gemma unavailable' : 'Could not reach the analysis service'}</p>}
             </div>)}
             {sending && <p role="status" className="neu-sm rounded-2xl p-3 text-xs text-ink">Reading your analysis and collected evidence…</p>}
             <div ref={end} />
@@ -122,10 +112,12 @@ export default function App() {
   const [picked, setPicked] = useState<Key | null>(null)
   const [tab, setTab] = useState<Key | null>(null)
   const [url, setUrl] = useState('')
+  const [postLimit,setPostLimit]=useState(20)
+  const datasetInput=useRef<HTMLInputElement>(null)
   const [err, setErr] = useState('')
   const [source, setSource] = useState<{ seed: string; label: string; revision?:number } | null>(null)
   const [nudge, setNudge] = useState(false)
-  const [busyAction, setBusyAction] = useState<'' | 'analyze' | 'sample' | 'login' | 'finish' | 'cancel'>('')
+  const [busyAction, setBusyAction] = useState<'' | 'analyze' | 'sample' | 'upload' | 'login' | 'finish' | 'cancel'>('')
   const busy = busyAction !== ''
   const [elapsed, setElapsed] = useState(0)
   const [progress, setProgress] = useState('Checking saved results…')
@@ -172,7 +164,7 @@ export default function App() {
       u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`)
       if (!u.hostname.includes('.')) throw new Error()
     } catch { return setErr('That does not look like a valid link. Try something like instagram.com/yourbrand') }
-    const seed = u.hostname + u.pathname
+    const seed = u.hostname + u.pathname + `:limit:${postLimit}`
     const controller = new AbortController()
     analysisController.current = controller
     setBusyAction('analyze'); setErr(''); setProgress('Checking collector…')
@@ -182,7 +174,7 @@ export default function App() {
         setLoginOpen(true)
         throw new Error('Sign-in is still open. Click Done signing in below, then Analyze.')
       }
-      live.set(seed, await api('/api/analyze', { url: raw }, { timeoutMs: 240000, signal: controller.signal }))
+      live.set(seed, await api('/api/analyze', { url: raw, post_limit:postLimit }, { timeoutMs: Math.max(240000,postLimit*10000+90000), signal: controller.signal }))
       connect(seed, u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? u.pathname : ''))
     } catch (ex) {
       setErr(ex instanceof TypeError ? 'Cannot reach the analysis service. Check your connection and try again.' : (ex as Error).message)
@@ -194,6 +186,13 @@ export default function App() {
     try { live.set('sample', await api('/api/sample')); connect('sample', 'sample data') }
     catch (ex) { setErr(`Could not load sample data: ${(ex as Error).message}`) }
     finally { setBusyAction('') }
+  }
+  const importDataset = async (file?:File) => {
+    if(!file)return
+    setBusyAction('upload');setErr('')
+    try { if(file.size>10_000_000)throw new Error('Use a file smaller than 10 MB.');const data=await uploadDataset(file);const seed=`upload:${Date.now()}`;live.set(seed,data);connect(seed,`${file.name} (uploaded data)`) }
+    catch(error){setErr((error as Error).message)}
+    finally{setBusyAction('');if(datasetInput.current)datasetInput.current.value=''}
   }
   const signIn = async () => {
     setBusyAction('login'); setErr(''); setLoginMessage('')
@@ -268,6 +267,7 @@ export default function App() {
                 </ul>
               </div>
               <form onSubmit={submit} className="mt-3 px-1" noValidate>
+                <label className="mb-3 block px-1 text-xs font-medium text-slate-700">Latest posts to collect<select aria-label="Latest posts to collect" value={postLimit} disabled={busy} onChange={e=>setPostLimit(Number(e.target.value))} className="neu-in ml-3 min-h-10 rounded-lg bg-mist px-3 text-ink">{[5,10,20,30,40,50].map(n=><option key={n} value={n}>{n} latest posts</option>)}</select></label><p className="mb-3 px-1 text-[11px] text-slate-600">Up to the selected count, depending on what the page returns. At least 5 valid posts are needed; larger collections take longer.</p>
                 <label htmlFor="url" className="mb-1 block px-1 text-xs font-medium text-slate-700">Your social media page link</label>
                 <div className="neu-in flex flex-col gap-2 rounded-2xl p-2 sm:flex-row">
                   <input id="url" value={url} onChange={(e) => { setUrl(e.target.value); setErr('') }} inputMode="url" autoComplete="url" placeholder="instagram.com/yourbrand"
@@ -275,12 +275,13 @@ export default function App() {
                   <button disabled={busy} className="neu-btn min-h-11 rounded-xl px-5 text-sm font-medium text-white disabled:opacity-60">{busyAction === 'analyze' ? 'Collecting…' : busy ? 'Please wait…' : 'Analyze'}</button>
                 </div>
                 <p id="url-msg" className="min-h-5 px-1 pt-1 text-xs text-wine" role="alert">{err}</p>
-                {busyAction === 'analyze' && <p role="status" className="px-1 pb-2 text-sm text-ink">{progress} · {elapsed}s elapsed. Reading comments can take up to 3 minutes.</p>}
+                {busyAction === 'analyze' && <p role="status" className="px-1 pb-2 text-sm text-ink">{progress} · {elapsed}s elapsed. Reading posts and comments may take several minutes.</p>}
                 {(busyAction === 'analyze' || (collectorBusy && !loginOpen)) && <button type="button" onClick={cancelAnalysis} disabled={busyAction === 'cancel'} className="mb-2 min-h-10 px-2 text-sm font-semibold text-wine underline">Cancel collection</button>}
                 <div className="flex items-center gap-3 px-1">
                   <span className="h-px flex-1 bg-slate-300" /><span className="text-xs text-slate-600">or</span><span className="h-px flex-1 bg-slate-300" />
                 </div>
                 <button type="button" disabled={busy} onClick={trySample} className="neu-sm mt-3 min-h-11 w-full rounded-xl text-sm font-semibold text-ink transition hover:text-wine">Try with sample data</button>
+                <button type="button" disabled={busy} onClick={()=>datasetInput.current?.click()} className="neu-sm mt-3 min-h-11 w-full rounded-xl text-sm font-semibold text-ink">{busyAction==='upload'?'Analyzing file…':'Analyze CSV / Excel data'}</button><input ref={datasetInput} type="file" accept=".csv,.xlsx,.xls" aria-label="Upload post dataset" onChange={e=>void importDataset(e.target.files?.[0])} className="sr-only" />
               </form>
               <div className="mt-4 border-t border-slate-300 px-2 pt-3 text-xs text-slate-700">
                 <p>SocialMonitor collects Instagram, Facebook and TikTok posts. Collection may take a few minutes.</p>

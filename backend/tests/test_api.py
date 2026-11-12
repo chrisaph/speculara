@@ -15,7 +15,7 @@ def isolate_external_services(monkeypatch):
     from app import db, llm, collector
     monkeypatch.setattr(db, "_client", lambda: None)
     monkeypatch.setattr(llm, "get_settings", lambda: SimpleNamespace(gemma_api_key="", gemma_model="gemma-4-31b-it"))
-    async def unavailable(url):
+    async def unavailable(url,limit=20):
         raise collector.CollectorError("Collector not configured in this test.")
     monkeypatch.setattr(collector, "collect_profile", unavailable)
 
@@ -55,7 +55,7 @@ def test_analyze_with_mocked_collector(monkeypatch):
     from app import main
     from app.schemas import ProfileInfo
 
-    async def fake(url):
+    async def fake(url,limit=20):
         return ProfileInfo(platform="Instagram", handle="brand"), sample_posts(30)
 
     monkeypatch.setattr(main.collector, "collect_profile", fake)
@@ -67,7 +67,7 @@ def test_too_few_posts(monkeypatch):
     from app import main
     from app.schemas import ProfileInfo
 
-    async def fake(url):
+    async def fake(url,limit=20):
         return ProfileInfo(notes="private account"), sample_posts(3)
 
     monkeypatch.setattr(main.collector, "collect_profile", fake)

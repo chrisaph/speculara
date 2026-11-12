@@ -9,12 +9,14 @@ The files in `vendor/collect/` and `vendor/types.ts` are copied from
 `LICENSE`. No upstream dashboard, branding assets, AI provider, or SQLite store
 is bundled. `vendor/db.ts` is a Speculara adapter exporting only `DATA_DIR`,
 which is the browser helper's sole database-module dependency. The collector
-source files are unchanged except `collect/instagram.ts` and the optional `saves` field in `types.ts`: Speculara captures the
+source files include these Speculara changes: `collect/instagram.ts`, `collect/facebook.ts`, `collect/tiktok.ts`, `collect/tiktok-public.ts` and the optional `saves` field in `types.ts`. Speculara captures the
 normal profile feed and embedded Relay data before trying the legacy profile
 endpoint, which can return HTTP 404. `instagram-data.mjs` maps current and legacy
 timeline records into the upstream format. If comment retrieval fails, observed
 post metrics are retained and further comment requests stop for that run.
 The adapter also preserves supplied Instagram play/share/save counts across sparse feed payloads. Missing counts remain unknown; no extra private-insights endpoint is assumed.
+
+The Facebook adapter reads both embedded initial Relay records and later GraphQL responses, filters post URLs to the requested profile, and bounds optional comment-thread reads to retain observed metrics if a thread fails. TikTok maps a supplied `collectCount` to saves; absent save counts remain unknown. The original MIT license remains unchanged.
 
 `worker.mjs` adapts those collectors to a line-delimited JSON stdin/stdout protocol with progress events and graceful finish/cancel controls. Python
 starts it without a shell. Browser cookies stay in `backend/.socialmonitor/`,
@@ -22,7 +24,7 @@ which is ignored by Git. The worker receives no Gemma or Supabase credentials.
 Only the explicit login action opens a visible browser. It never enters a
 password, posts, likes, follows, or sends messages.
 
-Collection is limited to 20 recent posts and 8 comments per post in Speculara.
+Collection requests 5-50 recent posts (default 20), with at most 8 comment samples per post in Speculara.
 Instagram's upstream profile endpoint may return fewer posts and does not page
 through the entire profile history. Comments need an Instagram session;
 Facebook needs a session. TikTok uses the upstream logged-out collector.

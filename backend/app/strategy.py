@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from time import monotonic
 import httpx
-from .chat_context import build_chat_context, cited_sources
+from .chat_context import build_chat_context, cited_sources, model_context
 from .llm import _generate, _response_text, LLMUnavailable
 
 REFERENCES = {
@@ -57,9 +57,9 @@ async def research(platform):
 
 
 async def generate_strategy(analysis):
-    context=build_chat_context(analysis)
+    context=model_context(analysis)
     docs=await research((analysis.get('profile') or {}).get('platform',''))
-    context['online_research']=docs
+    context['online_research']=[{**d,'text':d['text'][:5000]} for d in docs]
     for doc in docs:
         context['source_index'][doc['id']]={k:doc[k] for k in ('id','title','url')}
         context['source_index'][doc['id']]['kind']='web'

@@ -1,0 +1,90 @@
+{
+  "date": "2026-11-12",
+  "files": [
+    {
+      "path": "final-smoke.json",
+      "bytes": 3674,
+      "sha256": "6b779e06b76efdb2e37e4835be734374b729cd1bebbfc27d718b296e63bb8289"
+    },
+    {
+      "path": "live-verification.json",
+      "bytes": 2794,
+      "sha256": "abf51da2ee8950971afa10915c9e3d9405c6a1827fa2c7d142f4bf361d479fb3"
+    },
+    {
+      "path": "MVP-QA.md",
+      "bytes": 5142,
+      "sha256": "6ff69195d738884d73306045f12a8d60b02eaa214fc48270d3cc6b35fae7fbda"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2001,
+      "sha256": "c638673cf6d23a54fa79f8c0a5be95e1e151dad93eb4adcd339ece2f8e32f9ef"
+    },
+    {
+      "path": "service-retest.json",
+      "bytes": 3890,
+      "sha256": "ee1e0a23928c903ddd56f32ca50630046509431f3693af3bfb6852c23bb17800"
+    },
+    {
+      "path": "Speculara_Documentation.md",
+      "bytes": 30946,
+      "sha256": "b466001f7abab5a2563f351f836af1f7e8fa57b4739cbf623132af92c8f96146"
+    },
+    {
+      "path": "Speculara_Documentation.pdf",
+      "bytes": 1096257,
+      "sha256": "d514055c02568955e1c9f081b4c4d7592c250b781047cdb19b8c3f73d543e981"
+    },
+    {
+      "path": "Speculara_Feature_Code.md",
+      "bytes": 6551,
+      "sha256": "c238b65a031e3e35038f7e20919d8378d5557f8c0175c679f3a1d8cdd8f6d075"
+    },
+    {
+      "path": "Speculara_Logo.png",
+      "bytes": 1066783,
+      "sha256": "d44478e9ac9034d3aa965d95f2cd8c0dbce2b5f767c7103e047ddba8b03cf23b"
+    },
+    {
+      "path": "Speculara_Logo.svg",
+      "bytes": 13074,
+      "sha256": "dba3acb5ced64eed01457068bb46ffc38dfc55af15896596b071bf9bcb416ee2"
+    },
+    {
+      "path": "Speculara_MVP_10_Slides.html",
+      "bytes": 1446743,
+      "sha256": "e52c591e58ec34ece78c949346fc397492f38c84936a9a852646f16eaa4faa7f"
+    },
+    {
+      "path": "Speculara_MVP_10_Slides.pdf",
+      "bytes": 1073911,
+      "sha256": "2baa599e6c385246c5078c9833da27ccf2d103c43bd7aa4d84f4b2253ecbec4b"
+    },
+    {
+      "path": "Speculara_Presenter_Script_and_Reviewer.pdf",
+      "bytes": 1076030,
+      "sha256": "b5db9909b3eb4468997bd6aa4382edafd62fe881c9fd25a05109e522ce0207d5"
+    },
+    {
+      "path": "Speculara_Script_and_Reviewer.md",
+      "bytes": 11922,
+      "sha256": "0a8468e7e947e91471da14232293bc256ba4e3a5eb23e79709219f140892a0e1"
+    },
+    {
+      "path": "samples/README.md",
+      "bytes": 855,
+      "sha256": "a292920d4b01784de51753a2562539458f45d1ab1eccbb44df5171895255cd23"
+    },
+    {
+      "path": "samples/Speculara_Synthetic_Sample.csv",
+      "bytes": 9918,
+      "sha256": "7e0a929be38577607d9b626583607453dcd65e39ea5b8315b34efe6408624ea4"
+    },
+    {
+      "path": "samples/Speculara_Synthetic_Sample.xlsx",
+      "bytes": 9802,
+      "sha256": "6c72962e9200b43c13a493a69c3661389c29477cbf81b848d9d77948003486dd"
+    }
+  ]
+}

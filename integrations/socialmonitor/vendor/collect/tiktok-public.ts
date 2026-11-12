@@ -17,8 +17,8 @@ export interface Item {
   createTime?: number
   video?: { cover?: string; originCover?: string }
   imagePost?: unknown
-  stats?: { diggCount?: number; commentCount?: number; shareCount?: number; playCount?: number }
-  statsV2?: { diggCount?: string; commentCount?: string; shareCount?: string; playCount?: string }
+  stats?: { diggCount?: number; commentCount?: number; shareCount?: number; playCount?: number; collectCount?: number }
+  statsV2?: { diggCount?: string; commentCount?: string; shareCount?: string; playCount?: string; collectCount?: string }
 }
 
 export interface RawComment {

@@ -1,0 +1,101 @@
+[
+  {
+    "check": "backend health",
+    "passed": true,
+    "ok": true,
+    "llm": true,
+    "database": false
+  },
+  {
+    "check": "served page branding",
+    "passed": false
+  },
+  {
+    "check": "sample analysis",
+    "passed": true,
+    "post_count": 40
+  },
+  {
+    "check": "csv standalone upload",
+    "passed": true,
+    "status": 200,
+    "posts": 40,
+    "pairs": 15
+  },
+  {
+    "check": "csv all metrics supplied",
+    "passed": true
+  },
+  {
+    "check": "csv Filipino sentiment",
+    "passed": true
+  },
+  {
+    "check": "csv import matches sample posts",
+    "passed": true,
+    "status": 200
+  },
+  {
+    "check": "xlsx standalone upload",
+    "passed": true,
+    "status": 200,
+    "posts": 40,
+    "pairs": 15
+  },
+  {
+    "check": "xlsx all metrics supplied",
+    "passed": true
+  },
+  {
+    "check": "xlsx Filipino sentiment",
+    "passed": true
+  },
+  {
+    "check": "xlsx import matches sample posts",
+    "passed": true,
+    "status": 200
+  },
+  {
+    "check": "invalid post count rejected",
+    "passed": true
+  },
+  {
+    "check": "malformed upload rejected",
+    "passed": true
+  },
+  {
+    "check": "localhost CORS",
+    "passed": true
+  },
+  {
+    "check": "Facebook live collection",
+    "passed": true,
+    "status": 200,
+    "posts": 5,
+    "detail": ""
+  },
+  {
+    "check": "/api/chat live Gemma",
+    "passed": true,
+    "status": 200,
+    "engine": "gemma",
+    "seconds": 27.3,
+    "notice": "",
+    "research_status": null,
+    "answer": "No, more comments do not always mean more demand.\n\nDemand is based on the number of questions and requests within sampled comments. According to the `demand.ranking` data, posts with different comment volumes can show similar or lower demand signals:\n*   **Live Q&A replay #8** [P9] and **Product drop carousel #36** both have the same demand (4 questions, 3 requests).\n*   **Product drop carousel #31** [P32] has a higher number of questions (5) but fewer requests (1) compared to the posts above.\n\nThe `demand.summary` shows that out of 320 sampled comments, only 139 were identified as demand comments."
+  },
+  {
+    "check": "/api/strategy live Gemma",
+    "passed": false,
+    "status": 200,
+    "engine": "fallback",
+    "seconds": 7.4,
+    "notice": "Gemma's API quota is exhausted or requests are arriving too quickly. Try again later or check your Google AI Studio quota.",
+    "research_status": "unavailable",
+    "answer": "Build on Behind-the-scenes reel #30\nThis post has the highest observed engagement per view in the collected posts (0.16), using likes, comments, shares, saves available on every post."
+  },
+  {
+    "check": "served page branding after Vite reload",
+    "passed": true
+  }
+]

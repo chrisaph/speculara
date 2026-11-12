@@ -2,6 +2,7 @@ import type { Page } from 'playwright'
 import type { CollectedComment, CollectedPost, Profile } from '../types.ts'
 import type { CollectOptions, Collector } from './index.ts'
 import { pick } from './index.ts'
+import { facebookStories } from '../../facebook-data.mjs'
 import {
   Challenge,
   capture,
@@ -40,10 +41,17 @@ interface RawComment {
 
 const isGraphql = (u: string) => u.includes('/api/graphql')
 
+async function embeddedData(page: Page) {
+  return page.locator('script[type="application/json"]').evaluateAll(scripts => scripts.flatMap(script => {
+    try { return [JSON.parse(script.textContent || '')] } catch { return [] }
+  }))
+}
+
 async function checkWall(page: Page) {
   const u = page.url()
   if (u.includes('/checkpoint') || u.includes('/two_step_verification'))
     throw new Challenge('Facebook', 'a security check appeared')
+  if(u.includes('/login'))throw new Challenge('Facebook','the saved session needs sign-in')
 }
 
 /**
@@ -65,25 +73,22 @@ export const facebook: Collector = {
       await checkWall(page)
       await readScroll(page, Math.min(10, 2 + opt.limit))
     })
-    const stories = new Map<string, Story>()
-    for (const s of findAll<Story>(
-      feed,
-      (o) => typeof o.post_id === 'string' && typeof o.url === 'string' && 'comet_sections' in o,
-    ))
-      if (!stories.has(s.post_id!)) stories.set(s.post_id!, s)
-    if (!stories.size) opt.log(`Facebook ${profile.handle}: no posts found on the page.`)
+    const embedded=await embeddedData(page)
+    const stories:Story[]=facebookStories([...feed,...embedded],profile)
+    opt.log(`Facebook ${profile.handle}: ${feed.length} feed payloads, ${embedded.length} embedded payloads, ${stories.length} matching stories.`)
 
-    const list = [...stories.values()]
+    const list = stories
       .map((s) => ({
         s,
         time:
-          findAll<{ creation_time: number }>(s, (o) => typeof o.creation_time === 'number')[0]
+          s.creation_time ?? findAll<{ creation_time: number }>(s, (o) => typeof o.creation_time === 'number')[0]
             ?.creation_time ?? 0,
       }))
       .sort((a, b) => b.time - a.time)
     const picked = pick(list, (x) => x.s.post_id!, opt)
 
     const posts: CollectedPost[] = []
+    let readCommentText = opt.comments
     for (const { s, time } of picked) {
       const text =
         findAll<{ text: string }>(s, (o) => typeof o.text === 'string' && 'ranges' in o)[0]?.text ??
@@ -93,7 +98,24 @@ export const facebook: Collector = {
           s,
           (o) => 'reaction_count' in o || 'i18n_reaction_count' in o,
         )[0] ?? {}
-      const comments = opt.comments ? await readComments(page, s.url!, opt) : []
+      // A slow or unavailable comment thread must not discard observed post metrics.
+      let comments: CollectedComment[] = []
+      if (readCommentText) {
+        const commentPage = await page.context().newPage()
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          comments = await Promise.race([
+            readComments(commentPage, s.url!, opt),
+            new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Comment deadline')), 30000) }),
+          ])
+        } catch {
+          readCommentText = false
+          opt.log('Facebook: comment text unavailable; retaining observed post metrics.')
+        } finally {
+          clearTimeout(timer)
+          await commentPage.close().catch(() => {})
+        }
+      }
       posts.push({
         ext_id: s.post_id!,
         url: s.url!,
@@ -118,7 +140,7 @@ export const facebook: Collector = {
             (o) => typeof (o.share_count as { count?: number })?.count === 'number',
           )[0]?.share_count.count,
         ),
-        views: null,
+        views: num(findAll<{video_view_count:number}>(s,o=>typeof o.video_view_count==='number')[0]?.video_view_count),
         comments,
       })
       opt.log(`Facebook: ${s.post_id} · ${comments.length} comments read`)
@@ -141,7 +163,7 @@ async function readComments(
   })
   const out = new Map<string, CollectedComment>()
   for (const c of findAll<RawComment>(
-    raw,
+    [...raw, ...await embeddedData(page)],
     (o) => o.__typename === 'Comment' && typeof (o.body as { text?: string })?.text === 'string',
   )) {
     const id = c.legacy_fbid ?? c.id

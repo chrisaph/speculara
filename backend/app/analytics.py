@@ -19,6 +19,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from .schemas import Post
 from .evidence import build_evidence, ANALYSIS_VERSION, safe_url
+from .text_sentiment import score_text, METHOD
 
 warnings.filterwarnings("ignore")
 _vader = SentimentIntensityAnalyzer()
@@ -28,8 +29,8 @@ METRICS = ["likes", "comments", "shares", "saves", "views"]
 STOP = set(
     "a an and are as at be but by for from had has have he her his i if in into is it its just me my of on or our so than that the their them then there these they this to too us was we were what when where which who will with you your im ive dont cant it's i'm you're really very much yet even also get got can would could should about all any been do does how more most not now one out up very".split()
 )
-REQUEST_RE = re.compile(r"\b(please|pls|more|restock|tutorial|part 2|part two|link|drop|make a|do a|can you|could you|need)\b", re.I)
-QUESTION_RE = re.compile(r"\?|\b(where|how much|price|how do|what is|when|which|does it|do you|is it)\b", re.I)
+REQUEST_RE = re.compile(r"\b(please|pls|more|restock|tutorial|part 2|part two|link|drop|make a|do a|can you|could you|need|pabili|pa restock|dagdag|pahingi|paki)\b", re.I)
+QUESTION_RE = re.compile(r"\?|\b(where|how much|price|how do|what is|when|which|does it|do you|is it|magkano|saan|paano|kailan|mabibili)\b", re.I)
 
 
 def _label(c: float) -> str:
@@ -90,7 +91,7 @@ def sentiment(df: pd.DataFrame, evidence: dict) -> dict:
     if not samples:
         basis = "none"
     for sample in samples:
-        score = _vader.polarity_scores(sample["text"])["compound"]
+        score = score_text(sample["text"])
         sample.update(score=round(score, 4), tone=_label(score))
     counts = Counter(c["tone"] for c in samples)
     n = len(samples)
@@ -113,7 +114,7 @@ def sentiment(df: pd.DataFrame, evidence: dict) -> dict:
         by_type.append({"type": ty, "posts": len({c["post_id"] for c in group}), "scored": len(group),
                         "pos": positive, "neg": negative, "neu": 100 - positive - negative,
                         "sentiment": round(float(np.mean([c["score"] for c in group])), 3)})
-    return {"pos": pos, "neg": neg, "neu": 100 - pos - neg if n else 0,
+    return {"method":METHOD,"pos": pos, "neg": neg, "neu": 100 - pos - neg if n else 0,
             "keywords": keywords, "by_post_type": by_type, "scored": n, "basis": basis, "samples": samples,
             "comment_sample_count": len(evidence["comments"])}
 

@@ -4,6 +4,27 @@ import { fileURLToPath } from 'node:url'
 import { EventEmitter } from 'node:events'
 import { execute, validateProfile } from './worker.mjs'
 import { timelinePosts, navigateProfile } from './instagram-data.mjs'
+import { facebookStories } from './facebook-data.mjs'
+
+test('Facebook reads initial Relay stories and excludes other profile posts', () => {
+  const story = { __typename: 'Story', post_id: '100', url: 'https://www.facebook.com/joanquizonmakeup/posts/100', comet_sections: {} }
+  const unrelated = { ...story, post_id: '200', url: 'https://www.facebook.com/anotherpage/posts/200' }
+  const richer = { ...story, creation_time: 1700000000 }
+  const found = facebookStories([{ require: [{ data: [story, unrelated, richer] }] }], { handle: 'joanquizonmakeup' })
+  assert.equal(found.length, 1)
+  assert.equal(found[0].creation_time, 1700000000)
+  assert.equal(facebookStories([{ ...story, url: 'https://facebook.com.attacker.test/joanquizonmakeup/posts/100' }], { handle: 'joanquizonmakeup' }).length, 0)
+})
+
+test('TikTok preserves supplied save counts and does not fabricate missing counts', async () => {
+  await import('./vendor/collect/index.ts')
+  const { toPost } = await import('./vendor/collect/tiktok.ts')
+  const profile = { handle: 'example' }
+  const post = toPost(profile, { id: '123', createTime: 1700000000, statsV2: { collectCount: '42', playCount: '1000' } }, [])
+  assert.equal(post.saves, 42)
+  assert.equal(post.views, 1000)
+  assert.equal(toPost(profile, { id: '123', createTime: 1700000000 }, []).saves, null)
+})
 
 test('profile normalization supports the three collectors', () => {
   assert.deepEqual(validateProfile('instagram.com/mrbeast/?x=1'), { network: 'instagram', handle: 'mrbeast', url: 'https://www.instagram.com/mrbeast/' })
@@ -84,7 +105,7 @@ test('collection returns upstream records with bounded options and closes the br
   const { state, deps } = mocks()
   const result = await execute({ action: 'collect', url: 'instagram.com/brand', limit: 999 }, deps)
   assert.equal(result.posts[0].likes, 7)
-  assert.equal(state.options.limit, 40)
+  assert.equal(state.options.limit, 50)
   assert.equal(state.options.maxComments, 8)
   assert.equal(state.closed, 1)
 })

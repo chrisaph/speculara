@@ -1,5 +1,8 @@
 {
-  "description": "Explore and manage shared visual research with tools for collecting, organizing, and presenting references in a polished workspace for creative teams.",
+  "title": "Speculara | Social Media Analysis",
+  "description": "Analyze social media posts, audience sentiment, demand signals and forecasts with traceable evidence.",
+  "language": "en",
+  "icons": { "icon": "/favicon.png?v=speculara-20261112" },
   "robots": {
     "index": false
   },

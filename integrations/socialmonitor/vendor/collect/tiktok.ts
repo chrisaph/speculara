@@ -184,7 +184,7 @@ export async function readPublic(
   return posts
 }
 
-const toPost = (profile: Profile, it: Item, comments: CollectedComment[]): CollectedPost => {
+export const toPost = (profile: Profile, it: Item, comments: CollectedComment[]): CollectedPost => {
   const s = it.statsV2 ?? it.stats ?? {}
   return {
     ext_id: it.id,
@@ -197,6 +197,7 @@ const toPost = (profile: Profile, it: Item, comments: CollectedComment[]): Colle
     comments_count: num(s.commentCount),
     shares: num(s.shareCount),
     views: num(s.playCount),
+    saves: num(s.collectCount),
     comments,
   }
 }

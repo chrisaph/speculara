@@ -1,0 +1,128 @@
+[
+  {
+    "check": "Facebook",
+    "status": 200,
+    "posts": 5,
+    "dates": [
+      "2026-10-21",
+      "2026-11-09"
+    ],
+    "coverage": {
+      "views": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      },
+      "likes": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 234,
+        "complete": true
+      },
+      "comments": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 7,
+        "complete": true
+      },
+      "shares": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 24,
+        "complete": true
+      },
+      "saves": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      },
+      "sales": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      }
+    },
+    "comments": 2,
+    "seconds": 127.6,
+    "detail": ""
+  },
+  {
+    "check": "Facebook provenance",
+    "all_dates_valid": true,
+    "all_source_urls": true
+  },
+  {
+    "check": "TikTok",
+    "status": 200,
+    "posts": 5,
+    "dates": [
+      "2026-10-23",
+      "2026-11-11"
+    ],
+    "coverage": {
+      "views": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 2203700,
+        "complete": true
+      },
+      "likes": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 42908,
+        "complete": true
+      },
+      "comments": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 11054,
+        "complete": true
+      },
+      "shares": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 4163,
+        "complete": true
+      },
+      "saves": {
+        "known_posts": 5,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": 4204,
+        "complete": true
+      },
+      "sales": {
+        "known_posts": 0,
+        "total_posts": 5,
+        "imported_posts": 0,
+        "total": null,
+        "complete": false
+      }
+    },
+    "comments": 40,
+    "seconds": 43.6,
+    "detail": ""
+  },
+  {
+    "check": "Gemma strategy retest",
+    "status": 200,
+    "engine": "gemma",
+    "notice": "",
+    "seconds": 32.8,
+    "answer": "Online research was unavailable.\n\n**Next Actions for Speculara:**\n\n1.  **Scale Behind-the-Scenes (BTS) Content:**\n    *   **Observation:** Post #30 (\"Behind-the-scenes reel\") achieved the highest engagement per view at 0.16 [Recommend].\n    *   **Experiment:** I propose developing a series of BTS reels to determine if this specific content format consistently drives higher engagement than product-focused posts [P31].\n\n2.  **Implement a Q&A Content Strategy:**\n    *   **Observation:** High consumer demand is evident in \"Live Q&A replay\" posts, with specific high-demand peaks for posts #8, #3, #13, and #28 [Demand].\n    *   **Experiment:** I propose transitioning from sporadic replays to a scheduled weekly Q&A series to address the 43.4% request rate observed in sampled comments [Demand].\n\n3.  **Optimize Conversion via View-Driven Content:**\n    *   **Observation:** There is a moderate correlation (0.654) between Views and Sales [Correlation].\n    *   **Experiment:** I propose testing high-reach video formats specifically designed to drive traffic to the store, hypothesizing that increasing total views will linearly scale sales volume [Correlation].",
+    "research_status": "unavailable"
+  }
+]

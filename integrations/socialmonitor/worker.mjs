@@ -54,17 +54,17 @@ export async function execute(input, deps, emit = () => {}) {
     const notes = []
     let read = 0
     const options = {
-      range: 'all', limit: Math.min(40, Math.max(5, Number(input.limit) || 20)),
+      range: 'all', limit: Math.min(50, Math.max(5, Number(input.limit) || 20)),
       known: new Set(), due: new Map(), comments: true,
       maxComments: 8, usedSession: false,
       log: (line) => {
         notes.push(line); console.error(line)
-        emit({ event: 'progress', message: /comments read/.test(line) ? `Reading post ${++read} of up to ${Math.min(40, Math.max(5, Number(input.limit) || 20))}…` : line })
+        emit({ event: 'progress', message: /comments read/.test(line) ? `Reading post ${++read} of up to ${Math.min(50, Math.max(5, Number(input.limit) || 20))}…` : line })
       },
     }
     const session = await signedIn(context, profile.network)
     if (profile.network === 'facebook' && !session) throw new Error('Facebook requires sign-in. Use Sign in for comments, then close the sign-in window and retry.')
-    const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Collection timed out. Try a profile with fewer posts or sign in and retry.')), 180000) })
+    const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Collection timed out. Try a profile with fewer posts or sign in and retry.')), Math.max(180000,options.limit*10000+15000)) })
     emit({ event: 'progress', message: 'Loading posts and comment samples…' })
     const cancelled = (deps.cancelled || new Promise(() => {})).then(() => { throw new Error('Collection cancelled.') })
     const posts = await Promise.race([collectors[profile.network].collect(page, profile, options), timeout, cancelled])

@@ -48,7 +48,7 @@ def test_collector_fields_and_unavailable_metrics_are_preserved():
 def test_analysis_does_not_require_ai_key_or_call_gemma(monkeypatch):
     monkeypatch.setattr(main.db, "find_cached", lambda _: None)
     monkeypatch.setattr(main.db, "save_analysis", lambda *args: "saved-id")
-    async def collect(url):
+    async def collect(url,limit=20):
         return collector.ProfileInfo(platform="Instagram", handle="brand", collector="socialmonitor"), sample_posts(12)
     async def forbidden(*args, **kwargs):
         raise AssertionError("The page analysis must not call Gemma")
@@ -62,7 +62,7 @@ def test_analysis_does_not_require_ai_key_or_call_gemma(monkeypatch):
 
 def test_old_llm_cache_is_not_reused(monkeypatch):
     monkeypatch.setattr(main.db, "find_cached", lambda _: {"profile": {"collector": ""}})
-    async def unavailable(url):
+    async def unavailable(url,limit=20):
         raise collector.CollectorError("Sign in first", 409)
     monkeypatch.setattr(main.collector, "collect_profile", unavailable)
     response = TestClient(main.app).post("/api/analyze", json={"url": "instagram.com/brand"})
@@ -172,7 +172,7 @@ def test_analysis_is_cached_locally_even_without_storage(monkeypatch):
     calls = []
     monkeypatch.setattr(main.db, "find_cached", lambda _: None)
     monkeypatch.setattr(main.db, "save_analysis", lambda *args: None)
-    async def collect(url):
+    async def collect(url,limit=20):
         calls.append(url)
         return collector.ProfileInfo(platform="Instagram", collector="socialmonitor"), sample_posts(12)
     monkeypatch.setattr(collector, "collect_profile", collect)
@@ -188,7 +188,7 @@ def test_optional_storage_failure_does_not_block_results(monkeypatch):
         raise RuntimeError("Storage unavailable")
     monkeypatch.setattr(main.db, "find_cached", fail)
     monkeypatch.setattr(main.db, "save_analysis", fail)
-    async def collect(url):
+    async def collect(url,limit=20):
         return collector.ProfileInfo(platform="Instagram", collector="socialmonitor"), sample_posts(12)
     monkeypatch.setattr(collector, "collect_profile", collect)
     response = TestClient(main.app).post("/api/analyze", json={"url": "instagram.com/brand"})
@@ -199,7 +199,7 @@ def test_cancel_during_cache_lookup_prevents_browser_start(monkeypatch):
     def cache(_):
         collector._cancel_version += 1
         return None
-    async def forbidden(url):
+    async def forbidden(url,limit=20):
         raise AssertionError("Cancelled analysis must not start a browser")
     monkeypatch.setattr(main.db, "find_cached", cache)
     monkeypatch.setattr(collector, "collect_profile", forbidden)

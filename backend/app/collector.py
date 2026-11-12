@@ -107,6 +107,7 @@ def _process() -> subprocess.Popen:
     # The browser worker has no use for AI/database credentials.
     env = {k: v for k, v in os.environ.items() if not any(word in k.upper() for word in ("API_KEY", "SECRET", "TOKEN", "SUPABASE", "ANTHROPIC", "OPENAI", "GEMINI", "GEMMA", "AWS_"))}
     env["SPECULARA_COLLECTOR_DATA_DIR"] = str(DATA_DIR)
+    env['NODE_USE_SYSTEM_CA']='1'  # Trust managed Windows certificates without disabling TLS.
     return subprocess.Popen([node, str(WORKER)], cwd=WORKER.parent, env=env, stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8",
                             creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
@@ -129,7 +130,8 @@ def _invoke_sync(payload: dict) -> dict:
         def timeout():
             expired.set()
             _terminate_owned_worker(proc)
-        timer = threading.Timer(210, timeout)
+        deadline=max(210,30+int(payload.get('limit',20))*10)
+        timer = threading.Timer(deadline, timeout)
         timer.daemon = True
         timer.start()
         result = None
@@ -144,7 +146,7 @@ def _invoke_sync(payload: dict) -> dict:
                 result = message
         proc.wait(timeout=10)
         if expired.is_set():
-            raise CollectorError("SocialMonitor collection timed out after 3½ minutes. Please try again.")
+            raise CollectorError(f"SocialMonitor collection timed out after {deadline//60} minutes. Try fewer posts or sign in again.")
         if result is None:
             raise CollectorError("SocialMonitor could not start. Check Node.js and run npm run collector:setup.")
         if not result.get("ok"):
@@ -266,7 +268,8 @@ def normalize(data: dict, canonical_url: str, network: str, handle: str) -> tupl
     return ProfileInfo(platform=network, handle=handle, notes=notes, sources=sources, collector="socialmonitor", unavailable_metrics=sorted(missing)), posts
 
 
-async def collect_profile(raw_url: str) -> tuple[ProfileInfo, list[Post]]:
+async def collect_profile(raw_url: str, limit: int = 20) -> tuple[ProfileInfo, list[Post]]:
     canonical, network, handle = profile_url(raw_url)
-    result = await asyncio.to_thread(_invoke_sync, {"action": "collect", "url": canonical, "limit": 20})
+    if not 5<=limit<=50: raise CollectorError('Choose 5 to 50 posts.',422)
+    result = await asyncio.to_thread(_invoke_sync, {"action": "collect", "url": canonical, "limit": limit})
     return normalize(result, canonical, network, handle)

@@ -61,7 +61,7 @@ export function SentimentPanel({ analysis }: { analysis: any }) {
     <Well><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 className="text-sm font-semibold text-ink">{view.basis === 'captions' ? 'Collected captions' : 'Collected comments'}</h4><span className="text-xs text-slate-500">{view.samples.length} matching samples</span></div>
       {view.samples.length ? <><ul className="space-y-4">{view.samples.slice(0, page * 12).map((sample) => <CommentCard key={sample.id} sample={sample} />)}</ul>{view.samples.length > page * 12 && <button type="button" onClick={() => setPage(page + 1)} className="neu-sm mt-4 min-h-10 rounded-full px-4 text-xs font-semibold text-ink">Show more comments</button>}</> : <p role="status" className="text-sm text-slate-600">No collected text matches these filters. Try All time and All types. If no text was returned, collect the profile again after signing in.</p>}
     </Well>
-    <p className="mt-4 text-xs leading-relaxed text-slate-600">Scores use VADER on the collected text. They describe a sample, not every comment or a person's intent. Source buttons open an exact comment when available, otherwise its parent post or reel.</p>
+    <p className="mt-4 text-xs leading-relaxed text-slate-600">Scores use VADER with Filipino vocabulary and negation rules on the collected text. Slang, mixed language and sarcasm can still be misread. They describe a sample, not every comment or a person's intent. Source buttons open an exact comment when available, otherwise its parent post or reel.</p>
   </section>
 }
 

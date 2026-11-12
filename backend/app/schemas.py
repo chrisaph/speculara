@@ -37,6 +37,7 @@ class Post(BaseModel):
 class AnalyzeRequest(BaseModel):
     url: str = Field(min_length=3, max_length=500)
     refresh: bool = False
+    post_limit: int = Field(default=20, ge=5, le=50, strict=True)
 
 
 class CollectorLoginRequest(BaseModel):
