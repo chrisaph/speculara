@@ -4,6 +4,8 @@ Local social media analysis with forecasts, post similarity, charts, correlation
 
 ## Run
 
+For the complete private hosted MVP, use the [single-VPS deployment setup](deploy/README.md). It includes the browser collector and operator-only session management. The existing Netlify/Render configuration alone covers the UI/Python-only file demo, not full live collection.
+
 See [backend setup](backend/README.md). Keep the Python API at `http://localhost:8000` and run `npm.cmd run dev` from this directory for the frontend at `http://localhost:8443`.
 
 Gemma keys remain in ignored `backend/.env`. Supabase is optional. Profile collection uses an adapted, MIT-licensed SocialMonitor worker with a local saved browser session. Public collection cannot guarantee private Insights or sales metrics.

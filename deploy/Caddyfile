@@ -1,0 +1,25 @@
+{$DOMAIN} {
+    basic_auth {
+        {$SITE_USER} {$SITE_PASSWORD_HASH}
+    }
+    encode zstd gzip
+    request_body {
+        max_size 16MB
+    }
+    handle /api/* {
+        # Session lifecycle is operator-only, even inside the protected demo.
+        @operator path /api/collector/login /api/collector/login/* /api/collector/cancel
+        respond @operator "Collector sessions are managed by the demo operator." 403
+        reverse_proxy backend:8000 {
+            header_up -Authorization
+            transport http {
+                read_timeout 650s
+            }
+        }
+    }
+    handle {
+        root * /srv/www
+        try_files {path} /index.html
+        file_server
+    }
+}

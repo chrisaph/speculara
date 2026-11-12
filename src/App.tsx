@@ -8,6 +8,7 @@ import { MetricCoverage } from './components/MetricCoverage'
 type Key = 'predict' | 'recommend' | 'charts' | 'correlation' | 'sentiment' | 'demand'
 
 const INK = '#29348f', SKY = '#38bdf8', CREAM = '#f9f5f1', WINE = '#8f2934'
+const OPERATOR_MANAGED = import.meta.env?.VITE_COLLECTOR_MODE === 'operator'
 
 const META: Record<Key, { q: string; title: string; tab: string }> = {
   predict: { q: 'What do you want to Predict?', title: 'Prediction', tab: 'Predict' },
@@ -172,7 +173,7 @@ export default function App() {
       const status = await api('/api/collector/status', undefined, { timeoutMs: 5000, signal: controller.signal })
       if (status.login_open) {
         setLoginOpen(true)
-        throw new Error('Sign-in is still open. Click Done signing in below, then Analyze.')
+        throw new Error(OPERATOR_MANAGED ? 'The demo operator is reconnecting an account. Try again when sign-in is complete.' : 'Sign-in is still open. Click Done signing in below, then Analyze.')
       }
       live.set(seed, await api('/api/analyze', { url: raw, post_limit:postLimit }, { timeoutMs: Math.max(240000,postLimit*10000+90000), signal: controller.signal }))
       connect(seed, u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? u.pathname : ''))
@@ -276,7 +277,7 @@ export default function App() {
                 </div>
                 <p id="url-msg" className="min-h-5 px-1 pt-1 text-xs text-wine" role="alert">{err}</p>
                 {busyAction === 'analyze' && <p role="status" className="px-1 pb-2 text-sm text-ink">{progress} · {elapsed}s elapsed. Reading posts and comments may take several minutes.</p>}
-                {(busyAction === 'analyze' || (collectorBusy && !loginOpen)) && <button type="button" onClick={cancelAnalysis} disabled={busyAction === 'cancel'} className="mb-2 min-h-10 px-2 text-sm font-semibold text-wine underline">Cancel collection</button>}
+                {!OPERATOR_MANAGED && (busyAction === 'analyze' || (collectorBusy && !loginOpen)) && <button type="button" onClick={cancelAnalysis} disabled={busyAction === 'cancel'} className="mb-2 min-h-10 px-2 text-sm font-semibold text-wine underline">Cancel collection</button>}
                 <div className="flex items-center gap-3 px-1">
                   <span className="h-px flex-1 bg-slate-300" /><span className="text-xs text-slate-600">or</span><span className="h-px flex-1 bg-slate-300" />
                 </div>
@@ -285,6 +286,7 @@ export default function App() {
               </form>
               <div className="mt-4 border-t border-slate-300 px-2 pt-3 text-xs text-slate-700">
                 <p>SocialMonitor collects Instagram, Facebook and TikTok posts. Collection may take a few minutes.</p>
+                {OPERATOR_MANAGED ? <p className="mt-2">Live collection uses the demo operator's connected accounts. Ask the operator if access needs to be renewed. One collection runs at a time.</p> : <>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <select aria-label="Network to sign in to" value={loginNetwork} onChange={(e) => setLoginNetwork(e.target.value)} className="neu-in min-h-10 rounded-lg px-2">
                     <option value="instagram">Instagram</option><option value="facebook">Facebook</option>
@@ -294,6 +296,7 @@ export default function App() {
                 </div>
                 <p className="mt-2">Instagram comment text and Facebook collection require sign-in. Sign in in the separate browser window, then click Done signing in here. TikTok uses public pages.</p>
                 {loginMessage && <p role="status" className="mt-2 font-semibold text-ink">{loginMessage}</p>}
+                </>}
               </div>
               {locked && <p className="mt-2 px-2 text-center text-xs text-slate-600">Add your page link or try sample data to unlock the questions.</p>}
             </div>

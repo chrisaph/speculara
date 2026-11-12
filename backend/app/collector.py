@@ -18,7 +18,7 @@ from .evidence import safe_url
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKER = ROOT / "integrations" / "socialmonitor" / "worker.mjs"
-DATA_DIR = ROOT / "backend" / ".socialmonitor"
+DATA_DIR = Path(os.getenv("SPECULARA_COLLECTOR_DATA_DIR") or ROOT / "backend" / ".socialmonitor").resolve()
 _lock = threading.Lock()
 _login_process: subprocess.Popen | None = None
 _collection_process: subprocess.Popen | None = None

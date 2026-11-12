@@ -5,6 +5,8 @@ import { PredictPanel, RecommendPanel, ChartsPanel, CorrelationPanel } from '../
 import { MetricCoverage, metricsTemplate } from '../src/components/MetricCoverage'
 import { ForecastValidation } from '../src/components/ForecastValidation'
 import { SuggestionStrip } from '../src/components/SuggestionStrip'
+import App from '../src/App'
+export { uploadDataset } from '../src/api'
 
 // Load React and its renderer through the same Vite module graph on Windows.
 export const renderSentiment = (analysis: any) => renderToStaticMarkup(React.createElement(SentimentPanel, { analysis }))
@@ -17,3 +19,4 @@ export const renderCoverage = (analysis: any) => renderToStaticMarkup(React.crea
 export const renderValidation = (data: any) => renderToStaticMarkup(React.createElement(ForecastValidation, { data }))
 export const renderSuggestions = (items: string[]) => renderToStaticMarkup(React.createElement(SuggestionStrip, { items, onSelect: () => {} }))
 export const metricsCSV = metricsTemplate
+export const renderApp = () => renderToStaticMarkup(React.createElement(App))

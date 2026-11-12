@@ -71,6 +71,8 @@ Open http://localhost:8443 and test an analysis. To run the backend tests from `
 3. Copy the Project URL from the Connect dialog and a backend secret key from Settings -> API Keys into the backend environment above. The variable remains named `SUPABASE_SERVICE_ROLE_KEY`; it also accepts the legacy `service_role` key. Never put this key in React.
 
 ## Deployment requirements
+The recommended full private MVP setup is now documented in [the single-VPS deployment guide](../deploy/README.md), with root build contexts, both runtimes, the browser, persistent sessions and operator-only login. The older Render/Netlify instructions below describe the Python/file-based alternative and do not by themselves provide the live collector.
+
 The original Python-only Dockerfile cannot run the local browser collector. Hosting requires a container with Python, Node, Playwright/Chromium and persistent browser storage. Interactive sign-in is available on the local computer only. Do not deploy the existing Render blueprint unchanged for this collector setup.
 
 For a suitably configured server, New -> Blueprint (uses `render.yaml`), set `GEMMA_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `CORS_ORIGINS`. Set `CORS_ORIGINS` to your Netlify URL. `GEMMA_MODEL` is optional and defaults to `gemma-4-31b-it`.

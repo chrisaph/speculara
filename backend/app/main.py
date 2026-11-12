@@ -5,6 +5,7 @@ import re
 import asyncio
 import json
 from time import monotonic
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +33,16 @@ async def _optional_storage(function, *args):
         return None
 
 
-app = FastAPI(title="Speculara API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(_app):
+    try:
+        yield
+    finally:
+        await collector.cancel_collection()
+        await collector.finish_login()
+
+
+app = FastAPI(title="Speculara API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_origin_regex=s.cors_origin_regex,
                    allow_methods=["*"], allow_headers=["*"])
 

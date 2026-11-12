@@ -1,0 +1,56 @@
+name: speculara
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/backend.Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 40s
+    init: true
+    shm_size: 1gb
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      GEMMA_API_KEY: ${GEMMA_API_KEY:?Set GEMMA_API_KEY in deploy/.env}
+      GEMMA_MODEL: ${GEMMA_MODEL:-gemma-4-31b-it}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      CORS_ORIGINS: https://${DOMAIN:?Set DOMAIN in deploy/.env}
+      CORS_ORIGIN_REGEX: ""
+      SPECULARA_COLLECTOR_DATA_DIR: /data/socialmonitor
+      ENABLE_REMOTE_DESKTOP: ${ENABLE_REMOTE_DESKTOP:-0}
+      DISPLAY: :99
+    volumes:
+      - collector-data:/data
+    # Optional operator desktop is never published on an external interface.
+    ports:
+      - "127.0.0.1:6080:6080"
+    healthcheck:
+      test: [CMD, python, -c, "import httpx; r=httpx.get('http://127.0.0.1:8000/api/health'); r.raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in deploy/.env}
+      SITE_USER: ${SITE_USER:-demo}
+      SITE_PASSWORD_HASH: ${SITE_PASSWORD_HASH:?Set a Caddy password hash in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+volumes:
+  collector-data:
+  caddy-data:
+  caddy-config:
