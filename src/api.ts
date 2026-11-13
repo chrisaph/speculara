@@ -1,7 +1,14 @@
 const API = (import.meta.env?.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 let accessToken=''
 export function setAccessToken(value:string) { accessToken=value.trim() }
-function accessHeaders():Record<string,string> { return accessToken ? {Authorization:`Bearer ${accessToken}`} : {} }
+export function accessHeaders(base=API):Record<string,string> {
+  const headers:Record<string,string>=accessToken?{Authorization:`Bearer ${accessToken}`} : {}
+  try {
+    const host=new URL(base).hostname
+    if(['ngrok-free.app','ngrok-free.dev','ngrok.app','ngrok.dev','ngrok.io'].some(domain=>host.endsWith('.'+domain)))headers['ngrok-skip-browser-warning']='1'
+  } catch { /* Same-origin/local API does not need provider headers. */ }
+  return headers
+}
 
 export async function uploadDataset(file:File) {
   const body=new FormData();body.append('file',file)

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { api, setAccessToken, unlockDemo } from '../src/api.ts'
+import { api, setAccessToken, unlockDemo, accessHeaders } from '../src/api.ts'
 
 test('hung fetch is aborted at its deadline', async (t) => {
   t.mock.method(globalThis, 'fetch', (_, options) => new Promise((_, reject) => {
@@ -75,4 +75,13 @@ test('network failures explain backend and CORS configuration',async t=>{
 test('HTML success cannot unlock the workspace',async t=>{
   t.mock.method(globalThis,'fetch',async()=>new Response('<html>Not an API</html>'))
   await assert.rejects(unlockDemo('test-demo',{attempts:1}),/unexpected response/)
+})
+
+test('ngrok API requests use its documented client header while retaining authentication',()=>{
+  try {
+    setAccessToken('test-demo')
+    assert.deepEqual(accessHeaders('https://demo.ngrok-free.app'),{Authorization:'Bearer test-demo','ngrok-skip-browser-warning':'1'})
+    assert.equal(accessHeaders('https://speculara-api.onrender.com')['ngrok-skip-browser-warning'],undefined)
+    assert.equal(accessHeaders('https://demo.ngrok-free.app.evil.invalid')['ngrok-skip-browser-warning'],undefined)
+  } finally {setAccessToken('')}
 })

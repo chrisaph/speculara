@@ -1,5 +1,6 @@
 """Protected laptop backend for the existing Netlify frontend. No cloud login needed."""
 import argparse
+import asyncio
 import getpass
 import json
 import os
@@ -66,10 +67,29 @@ def child_options():
     return {'creationflags':subprocess.CREATE_NO_WINDOW} if os.name=='nt' else {}
 
 
-def start():
+async def host_ngrok(keys,api):
+    import ngrok
+    listener=await asyncio.wait_for(ngrok.forward(LOCAL,authtoken=keys['ngrok']),timeout=60)
+    try:
+        url=listener.url()
+        if not url.startswith('https://'):raise RuntimeError('ngrok did not provide an HTTPS endpoint.')
+        save_state(status='ready',provider='ngrok',url=url,backend=LOCAL,frontend=FRONTEND,owner=getpass.getuser())
+        print('Netlify VITE_API_URL: '+url,flush=True)
+        print('Demo code: run laptop-demo.py code to copy it privately. Leave this process running.',flush=True)
+        while not STOP.exists():
+            if api.poll() is not None:raise RuntimeError('Backend exited; ngrok is being stopped.')
+            await asyncio.sleep(1)
+    finally:await listener.close()
+
+
+def start(provider='cloudflare'):
     keys=credentials()
     cloudflared=shutil.which('cloudflared') or str(PRIVATE/'bin/cloudflared.exe')
-    if not Path(cloudflared).is_file():
+    if provider=='ngrok':
+        if not keys.get('ngrok'):raise RuntimeError('Create a free ngrok account, copy its authtoken, then run laptop-demo.py ngrok-auth. Do not paste the token into chat.')
+        try:import ngrok
+        except ImportError:raise RuntimeError('Install the optional tunnel SDK: python -m pip install -r deploy/requirements-laptop.txt')
+    elif not Path(cloudflared).is_file():
         raise RuntimeError('Install cloudflared first, or put its official Windows executable at .tmp-laptop-demo/bin/cloudflared.exe.')
     # Never attach a public tunnel to an unrelated/pre-existing local server.
     with httpx.Client(base_url=LOCAL,timeout=2,trust_env=False) as client:
@@ -92,6 +112,10 @@ def start():
                     time.sleep(1)
                 else: raise RuntimeError('Backend did not become ready within 90 seconds.')
                 verify_protection(client,keys)
+            if provider=='ngrok':
+                try:asyncio.run(host_ngrok(keys,api))
+                except TimeoutError:raise RuntimeError('ngrok did not connect within 60 seconds. Check this network permits ngrok HTTPS access.')
+                return
             # Empty explicit config avoids accidentally selecting an unrelated named tunnel.
             config=PRIVATE/'cloudflared.yml';config.write_text('{}\n',encoding='utf-8')
             tunnel_env={k:v for k,v in os.environ.items() if not any(word in k.upper() for word in ('TOKEN','SECRET','API_KEY','SUPABASE'))}
@@ -137,10 +161,20 @@ def start():
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=['start','status','login','finish','cancel','code','stop'])
+    parser.add_argument('action',choices=['start','status','login','finish','cancel','code','stop','ngrok-auth'])
     parser.add_argument('network',nargs='?',default='instagram',choices=['instagram','facebook'])
+    parser.add_argument('--provider',choices=['cloudflare','ngrok'],default='cloudflare')
     args=parser.parse_args()
-    if args.action=='start':start();return
+    if args.action=='start':start(args.provider);return
+    if args.action=='ngrok-auth':
+        if os.name!='nt':raise RuntimeError('Clipboard import is available on Windows only.')
+        keys=credentials()
+        token=subprocess.check_output(['powershell.exe','-NoProfile','-NonInteractive','-Command','Get-Clipboard -Raw'],text=True,creationflags=subprocess.CREATE_NO_WINDOW).strip()
+        if not 20<=len(token)<=300 or re.search(r'\s|[\x00-\x1f\x7f]',token):
+            raise RuntimeError('Clipboard does not look like a single ngrok authtoken. Copy only its value from the ngrok dashboard.')
+        keys['ngrok']=token
+        CREDS.write_text(json.dumps(keys),encoding='utf-8')
+        print('ngrok authtoken saved privately on this laptop. No token was printed.');return
     if args.action=='status':
         print(STATE.read_text(encoding='utf-8') if STATE.exists() else 'Laptop demo has not been started.');return
     if args.action=='stop':
@@ -160,5 +194,9 @@ def main():
 if __name__=='__main__':
     try:main()
     except KeyboardInterrupt:pass
-    except (RuntimeError,AssertionError,httpx.HTTPError) as error:
-        print(str(error),file=sys.stderr);sys.exit(1)
+    except (RuntimeError,AssertionError,httpx.HTTPError,OSError) as error:
+        message=str(error)
+        if CREDS.exists():
+            for value in json.loads(CREDS.read_text(encoding='utf-8')).values():
+                if isinstance(value,str) and value:message=message.replace(value,'[redacted]')
+        print(message[:2000],file=sys.stderr);sys.exit(1)

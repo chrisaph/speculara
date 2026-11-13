@@ -1,5 +1,23 @@
 # Laptop backend + existing Netlify frontend
 
+## Keep this network: ngrok alternative
+
+Cloudflare DNS discovery timed out on this laptop's current connection. No system DNS/firewall changes were made. ngrok provides a separate HTTPS connection option; it still needs verification on this network and is not guaranteed to work if network policy blocks it.
+
+1. Create/sign in to a **Free** account at `https://dashboard.ngrok.com/signup`. Copy **Your Authtoken** from its dashboard. Do not send it to chat or put it in Netlify. The official optional SDK is already installed on this laptop; elsewhere install `python -m pip install -r deploy/requirements-laptop.txt`.
+2. Immediately run this to import the copied token into the account-restricted, git-ignored credentials file:
+
+   ```powershell
+   .\backend\.venv\Scripts\python.exe deploy/laptop-demo.py ngrok-auth
+   .\backend\.venv\Scripts\python.exe deploy/laptop-demo.py start --provider ngrok
+   ```
+
+3. Leave it running. Once it reports the HTTPS URL, set Netlify's `VITE_API_URL` to that URL and redeploy. `code`, `login instagram`, `finish` and `stop` commands below work unchanged. The SDK gets its token in memory, never via command arguments. Backend authentication remains mandatory. Netlify API calls include ngrok's documented API-client header; uploads use it too.
+
+The free account's assigned dev domain normally stays the same after agent restart. Free usage quotas still apply. Sources: [ngrok account setup](https://ngrok.com/docs/start), [official Python agent SDK](https://github.com/ngrok/ngrok-python), [free limits and API-client header](https://ngrok.com/docs/pricing-limits/free-plan-limits).
+
+## Cloudflare Quick Tunnel route
+
 The laptop runs collection, Gemma API calls and its original saved browser profile. Netlify stays at `https://speculara.netlify.app`. A temporary Cloudflare HTTPS tunnel exposes only the protected backend. Keep the laptop awake and online. This is a private demo setup, not permanent hosting.
 
 1. Install Python/backend and collector dependencies as in `backend/README.md`. Keep Gemma/Supabase keys in ignored `backend/.env`.

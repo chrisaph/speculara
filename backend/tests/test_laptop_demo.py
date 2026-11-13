@@ -1,4 +1,6 @@
 import importlib.util
+import asyncio
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 import pytest
@@ -28,3 +30,31 @@ def test_tunnel_is_refused_for_an_unmatched_demo_key(launcher,monkeypatch):
     monkeypatch.setattr(access,'get_settings',lambda:SimpleNamespace(require_access_code=True,demo_access_token='actual-demo',operator_access_token='test-operator'))
     with pytest.raises(AssertionError,match='Demo key check failed'):
         launcher.verify_protection(TestClient(main.app),{'demo':'wrong-demo','operator':'test-operator'})
+
+
+def test_ngrok_uses_private_token_and_closes_its_own_listener(launcher,monkeypatch,tmp_path):
+    closed=[];saved=[]
+    class Listener:
+        def url(self):return 'https://demo.ngrok-free.app'
+        async def close(self):closed.append(True)
+    async def forward(address,**kwargs):
+        assert address==launcher.LOCAL and kwargs=={'authtoken':'test-private-ngrok-token'}
+        return Listener()
+    monkeypatch.setitem(sys.modules,'ngrok',SimpleNamespace(forward=forward))
+    stop=tmp_path/'stop.request';stop.touch()
+    monkeypatch.setattr(launcher,'STOP',stop)
+    monkeypatch.setattr(launcher,'save_state',lambda **values:saved.append(values))
+    asyncio.run(launcher.host_ngrok({'ngrok':'test-private-ngrok-token'},SimpleNamespace(poll=lambda:None)))
+    assert closed==[True] and saved[0]['url']=='https://demo.ngrok-free.app'
+
+
+def test_non_https_ngrok_endpoint_is_closed_and_rejected(launcher,monkeypatch):
+    closed=[]
+    class Listener:
+        def url(self):return 'http://unprotected.invalid'
+        async def close(self):closed.append(True)
+    async def forward(*args,**kwargs):return Listener()
+    monkeypatch.setitem(sys.modules,'ngrok',SimpleNamespace(forward=forward))
+    with pytest.raises(RuntimeError,match='HTTPS endpoint'):
+        asyncio.run(launcher.host_ngrok({'ngrok':'test-private-token'},SimpleNamespace(poll=lambda:None)))
+    assert closed==[True]

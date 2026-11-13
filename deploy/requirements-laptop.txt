@@ -1,0 +1,2 @@
+# Official embedded ngrok agent, optional alternative to cloudflared.
+ngrok==1.7.0
