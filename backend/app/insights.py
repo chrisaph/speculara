@@ -102,9 +102,9 @@ def _forecast(df, metric, horizon, as_of=None, basis='week'):
         result['validation']['baseline_weighted_error_pct']=round(100*float(np.abs(test-baseline).sum())/denom,1) if denom else None
         result['validation']['baseline_model']=f'Recent four-{unit[:-1]} average'
         result['validation']['selection']='Rolling multi-step validation on training data using the holdout horizon; final holdout excluded from model selection.'
-        if wape is None or round(wape,1)>=100:
-            result['reason']='Forecast withheld: the held-out predictions were not reliable enough. Observed history is still shown. Collect more representative posts or use the charts to compare actual results.'
-            return result
+        result['reliability']='unknown' if wape is None else 'low' if wape>=100 else 'backtested'
+        if wape is None or wape>=100:
+            result['reason']='Exploratory estimate only: '+('the held-out actual total is zero, so percentage error cannot be calculated.' if wape is None else 'held-out prediction error exceeded or equaled 100%.')+' The dashed line is a model estimate, not a reliable performance target. Collect more representative posts before using it for decisions.'
         result['forecast_supported']=True
         for i, v in enumerate(fc, 1):
             band = 1.64 * error * np.sqrt(i)

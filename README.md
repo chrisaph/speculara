@@ -24,6 +24,8 @@ Use **Analyze CSV / Excel data** to demonstrate the supplied 40 fictional posts.
 
 Prediction now defaults to **Per post**, with **Weekly totals** as a separate view. It shows raw held-out error and baseline comparison. See [forecast correction notes](qa/forecast-fix-20261112.md) for the change since the original demo package.
 
+Computed forecasts with poor or undefined percentage backtests remain visible as **exploratory estimates**, with their actual error, warning and uncertainty band. Missing metrics and insufficient histories remain unavailable; no minimum accuracy is invented. Analysis version 9 upgrades saved results from stored posts. See [prediction and hosted-access verification](qa/prediction-access-20261113.md).
+
 ## Checks
 
 From the repository root run `npm.cmd run collector:test`, `npm.cmd run test:api`, `npm.cmd run test:analysis`, `npx.cmd tsc --noEmit` and `npm.cmd run build`. From `backend`, run `.venv/Scripts/python.exe -m pytest -q`.

@@ -32,6 +32,8 @@ Use the origin without `/api`. The build rejects missing URLs, HTTP, localhost, 
 
 Set Render's `CORS_ORIGINS` to the exact resulting Netlify origin (plus your custom domain if used, comma-separated) and redeploy Render. Preview domains are excluded unless explicitly allowed.
 
+The Blueprint also sets `FRONTEND_URL=https://speculara.netlify.app` for this project's actual site. The backend combines that exact origin with `CORS_ORIGINS` and normalizes pasted quotes/trailing slashes. If you use another site name, change `FRONTEND_URL` to match. After this change syncs, check that Render's Environment contains that variable. An authentication error must still include the allowed CORS origin so the browser can distinguish an incorrect code from a network failure. The access screen wakes the backend before validating the code and never retries a rejected code.
+
 Open Netlify and enter the demo token. It stays in tab memory and is sent as a Bearer header; refreshing requires re-entry. Never put API secrets in frontend environment variables. Requests go directly to Render: do not add a Netlify API proxy, whose documented 26-second timeout is too short for collection and some Gemma calls.
 
 ## Operator social sign-in

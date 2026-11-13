@@ -1,10 +1,26 @@
 import os
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False, encoding="utf-8-sig")
+
+
+def cors_origins(value: str, frontend_url: str = '') -> list[str]:
+    origins=[]
+    for item in (value+','+frontend_url).split(','):
+        item=item.strip().strip('"\'').rstrip('/')
+        try:
+            url=urlsplit(item)
+            if url.scheme not in ('http','https') or not url.hostname or url.username or url.password or url.path or url.query or url.fragment:
+                continue
+            origin=f'{url.scheme}://{url.netloc.lower()}'
+            if origin not in origins: origins.append(origin)
+        except ValueError:
+            continue
+    return origins
 
 
 class Settings:
@@ -17,7 +33,7 @@ class Settings:
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_service_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
     # Comma-separated list of allowed browser origins, e.g. https://speculara.netlify.app
-    cors_origins: list[str] = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8443").split(",") if o.strip()]
+    cors_origins: list[str] = cors_origins(os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8443"),os.getenv('FRONTEND_URL',''))
     # Also allow Netlify deploy previews like https://deploy-preview-3--speculara.netlify.app
     cors_origin_regex: str = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.netlify\.app")
 

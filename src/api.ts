@@ -31,16 +31,38 @@ export async function api<T = any>(path: string, body?: unknown, options: { time
       ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
       signal: controller.signal,
     })
-    const data = await res.json().catch(() => ({}))
+    const data = await res.json().catch(() => null)
     if (controller.signal.aborted) throw new Error('Request aborted.')
-    if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'The analysis service had a problem. Please try again.')
+    if (!res.ok) throw new Error(typeof data?.detail === 'string' ? data.detail : 'The analysis service had a problem. Please try again.')
+    if (data===null) throw new Error('The backend is starting or returned an unexpected response. Wait a moment and retry.')
     return data as T
   } catch (error) {
     if (timedOut) throw new Error('The request timed out. The collector may need sign-in or a retry; check its status below.')
     if (options.signal?.aborted) throw new Error('Analysis cancelled.')
+    if (error instanceof TypeError) throw new Error('Cannot reach the backend. It may be waking up. Check the Render URL and that Render allows this Netlify site in FRONTEND_URL or CORS_ORIGINS.')
     throw error
   } finally {
     clearTimeout(timer)
     options.signal?.removeEventListener('abort', forwardAbort)
   }
+}
+
+export async function unlockDemo(code:string,options:{attempts?:number;retryDelayMs?:number}={}) {
+  setAccessToken('')
+  const attempts=options.attempts??6
+  for(let attempt=0;attempt<attempts;attempt++) {
+    try {
+      const health=await api('/api/health',undefined,{timeoutMs:20000})
+      if(health?.ok!==true)throw new Error('The backend is not ready yet.')
+      break
+    } catch(error) {
+      if(attempt===attempts-1)throw error
+      await new Promise(resolve=>setTimeout(resolve,options.retryDelayMs??2000))
+    }
+  }
+  setAccessToken(code)
+  try {
+    const result=await api('/api/access')
+    if(result?.ok!==true)throw new Error('The backend did not confirm demo access. Check VITE_API_URL and redeploy Netlify.')
+  } catch(error) {setAccessToken('');throw error}
 }
