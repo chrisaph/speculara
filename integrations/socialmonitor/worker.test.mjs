@@ -164,6 +164,34 @@ test('Done signing in closes the context without requiring Chrome to exit first'
   assert.equal(state.closed, 1)
 })
 
+test('a rejected login page leaves the visible browser open for manual inspection',async()=>{
+  const {state,deps}=mocks()
+  const page=new EventEmitter(),ctx=new EventEmitter()
+  page.goto=async()=>{throw new Error('page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE')}
+  page.isClosed=()=>false
+  ctx.pages=()=>[page];deps.openBrowser=async()=>ctx
+  let warning=''
+  await execute({action:'login',network:'instagram'},deps,event=>{
+    if(event.event==='login_ready') {
+      assert.equal(state.closed,0)
+      warning=event.navigation_warning
+      page.emit('close')
+    }
+  })
+  assert.match(warning,/does not confirm sign-in/)
+  assert.equal(state.closed,1)
+})
+
+test('closed login pages remain failures rather than being reported as open',async()=>{
+  const {state,deps}=mocks()
+  const page=new EventEmitter(),ctx=new EventEmitter()
+  page.goto=async()=>{throw new Error('page.goto: net::ERR_HTTP_RESPONSE_CODE_FAILURE')}
+  page.isClosed=()=>true
+  ctx.pages=()=>[page];deps.openBrowser=async()=>ctx
+  await assert.rejects(execute({action:'login',network:'instagram'},deps),/ERR_HTTP_RESPONSE_CODE_FAILURE/)
+  assert.equal(state.closed,1)
+})
+
 test('cancelling an in-flight collector closes its browser', async () => {
   const { state, deps } = mocks()
   deps.collectors.instagram.collect = () => new Promise(() => {})

@@ -41,9 +41,17 @@ export async function execute(input, deps, emit = () => {}) {
       const closed = new Promise((resolve) => ctx.once('close', resolve))
       // Chrome can keep its process/context alive after its last window closes.
       const pageClosed = new Promise((resolve) => page.once('close', resolve))
-      await page.goto(input.network === 'instagram' ? 'https://www.instagram.com/accounts/login/' : 'https://www.facebook.com/login/', { waitUntil: 'domcontentloaded', timeout: 45000 })
+      let navigationWarning = ''
+      try {
+        await page.goto(input.network === 'instagram' ? 'https://www.instagram.com/accounts/login/' : 'https://www.facebook.com/login/', { waitUntil: 'domcontentloaded', timeout: 45000 })
+      } catch(error) {
+        if(page.isClosed?.() || !/net::ERR_(HTTP_RESPONSE_CODE_FAILURE|CONNECTION_RESET|CONNECTION_CLOSED|TIMED_OUT)|Timeout.*exceeded/.test(String(error))) throw error
+        // A live interactive browser is still useful for inspecting a rejected
+        // page. Do not close it just because automated navigation was refused.
+        navigationWarning='The browser opened, but the login page did not load. Inspect it in the operator desktop. The platform may reject Render cloud traffic; an open browser does not confirm sign-in.'
+      }
       await page.bringToFront?.()
-      emit({ event: 'login_ready' })
+      emit({ event: 'login_ready', navigation_warning: navigationWarning })
       timer = setTimeout(() => closeBrowser(), 10 * 60 * 1000)
       await Promise.race([closed, pageClosed, deps.finishLogin || new Promise(() => {})])
       return { closed: true }

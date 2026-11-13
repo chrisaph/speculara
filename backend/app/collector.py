@@ -199,7 +199,8 @@ async def start_login(network: str) -> dict:
         if result.get("event") != "login_ready":
             raise CollectorError(result.get("error", "Could not open the sign-in window."))
         _login_process = proc
-        _progress = "Finish signing in, then click Done signing in."
+        warning = str(result.get('navigation_warning') or '')[:500]
+        _progress = warning or "Finish signing in, then click Done signing in."
     except BaseException:
         if proc and proc.poll() is None:
             try:
@@ -226,7 +227,7 @@ async def start_login(network: str) -> dict:
     task = asyncio.create_task(finish())
     _login_tasks.add(task)
     task.add_done_callback(_login_tasks.discard)
-    return {"opened": True, "message": "Sign in in the browser window, then click Done signing in here."}
+    return {"opened": True, "navigation_warning": warning, "message": warning or "Sign in in the browser window, then click Done signing in here."}
 
 
 def normalize(data: dict, canonical_url: str, network: str, handle: str) -> tuple[ProfileInfo, list[Post]]:

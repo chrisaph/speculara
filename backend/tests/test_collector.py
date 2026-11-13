@@ -134,6 +134,18 @@ def test_login_releases_browser_lock_when_window_closes(monkeypatch):
     assert not collector._lock.locked() and collector._login_process is None
 
 
+def test_login_propagates_page_navigation_warning(monkeypatch):
+    warning='Login page refused; inspect the open browser.'
+    proc=SimpleNamespace(stdin=io.StringIO(),stdout=io.StringIO(json.dumps({'event':'login_ready','navigation_warning':warning})+'\n'),wait=lambda:0,poll=lambda:0)
+    monkeypatch.setattr(collector,'_process',lambda:proc)
+    async def run():
+        result=await collector.start_login('instagram')
+        assert result['opened'] and result['navigation_warning']==warning and result['message']==warning
+        await asyncio.gather(*collector._login_tasks)
+    asyncio.run(run())
+    assert not collector._lock.locked()
+
+
 def test_finish_without_open_window_does_not_claim_success(monkeypatch):
     monkeypatch.setattr(collector, '_login_process', None)
     result=asyncio.run(collector.finish_login())
