@@ -4,7 +4,7 @@ import { PredictPanel, RecommendPanel, ChartsPanel, CorrelationPanel } from './c
 import { SentimentPanel, DemandPanel, EvidenceSources, SourceButton } from './components/AnalysisPanels'
 import { SuggestionStrip } from './components/SuggestionStrip'
 import { MetricCoverage } from './components/MetricCoverage'
-import { AccessGate } from './components/AccessGate'
+import { AccessGate, LockDemoButton } from './components/AccessGate'
 import { AnalysisReadyNotice,AnalysisReadyToast,type ReadyInfo } from './components/AnalysisReady'
 
 type Key = 'predict' | 'recommend' | 'charts' | 'correlation' | 'sentiment' | 'demand'
@@ -250,7 +250,10 @@ function Workspace() {
           <div className="neu mx-auto flex max-w-5xl items-center gap-3 rounded-2xl px-4 py-2.5 sm:px-5">
             <span className="neu-sm grid h-11 w-11 shrink-0 place-items-center rounded-full"><Logo size={32} /></span>
             <span className="font-display text-xl font-bold tracking-tight text-ink">Speculara</span>
-            <span className="ml-auto hidden text-xs text-slate-600 md:block">Social media analysis for marketing teams</span>
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              <span className="hidden text-xs text-slate-600 md:block">Social media analysis for marketing teams</span>
+              <LockDemoButton />
+            </div>
           </div>
         </header>
 
