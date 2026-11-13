@@ -31,7 +31,7 @@ export async function execute(input, deps, emit = () => {}) {
       const closed = new Promise((resolve) => ctx.once('close', resolve))
       // Chrome can keep its process/context alive after its last window closes.
       const pageClosed = new Promise((resolve) => page.once('close', resolve))
-      await page.goto(input.network === 'instagram' ? 'https://www.instagram.com/accounts/login/' : 'https://www.facebook.com/login/', { waitUntil: 'domcontentloaded', timeout: 20000 })
+      await page.goto(input.network === 'instagram' ? 'https://www.instagram.com/accounts/login/' : 'https://www.facebook.com/login/', { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.bringToFront?.()
       emit({ event: 'login_ready' })
       timer = setTimeout(() => closeBrowser(), 10 * 60 * 1000)

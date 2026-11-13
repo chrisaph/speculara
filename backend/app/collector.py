@@ -86,10 +86,11 @@ def _stop_sync(proc, action):
 
 
 async def finish_login() -> dict:
+    was_open = _login_process is not None and _login_process.poll() is None
     await asyncio.to_thread(_stop_sync, _login_process, "finish_login")
     if _login_tasks:
         await asyncio.gather(*list(_login_tasks))
-    return {"closed": True, "message": "Sign-in window closed. You can now analyze the profile."}
+    return {"closed": was_open, "message": "Sign-in window closed. Retry collection only if you completed sign-in inside it." if was_open else "No sign-in window was open. This does not confirm a saved login. Open sign-in and complete it before analyzing."}
 
 
 async def cancel_collection() -> dict:
@@ -188,7 +189,12 @@ async def start_login(network: str) -> dict:
         proc = _process()
         proc.stdin.write(json.dumps({"action": "login", "network": network}) + "\n")
         proc.stdin.flush()
-        line = await asyncio.wait_for(asyncio.to_thread(proc.stdout.readline), timeout=25)
+        try:
+            line = await asyncio.wait_for(asyncio.to_thread(proc.stdout.readline), timeout=90)
+        except TimeoutError:
+            raise CollectorError('The sign-in browser did not become ready within 90 seconds. Check Render logs for browser failures or memory-limit restarts.')
+        if not line.strip():
+            raise CollectorError('The browser worker exited before sign-in opened. Check Render logs and memory limits; no login session was created.')
         result = json.loads(line)
         if result.get("event") != "login_ready":
             raise CollectorError(result.get("error", "Could not open the sign-in window."))

@@ -134,6 +134,20 @@ def test_login_releases_browser_lock_when_window_closes(monkeypatch):
     assert not collector._lock.locked() and collector._login_process is None
 
 
+def test_finish_without_open_window_does_not_claim_success(monkeypatch):
+    monkeypatch.setattr(collector, '_login_process', None)
+    result=asyncio.run(collector.finish_login())
+    assert result['closed'] is False and 'does not confirm a saved login' in result['message']
+
+
+def test_login_worker_exit_reports_startup_failure_and_releases_lock(monkeypatch):
+    proc=SimpleNamespace(stdin=io.StringIO(),stdout=io.StringIO(''),poll=lambda:1)
+    monkeypatch.setattr(collector,'_process',lambda:proc)
+    with pytest.raises(collector.CollectorError,match='worker exited before sign-in opened'):
+        asyncio.run(collector.start_login('instagram'))
+    assert not collector._lock.locked()
+
+
 def test_retry_login_closes_existing_session_before_reopening(monkeypatch):
     calls = []
     monkeypatch.setattr(collector, '_login_process', SimpleNamespace(poll=lambda: None))

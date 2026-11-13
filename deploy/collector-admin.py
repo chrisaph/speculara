@@ -4,6 +4,7 @@ import json
 import sys
 import os
 import ssl
+import re
 from urllib.parse import urlparse
 import httpx
 
@@ -32,11 +33,18 @@ def main():
             print(json.dumps(response.json(),indent=2))
     except httpx.HTTPStatusError as error:
         status=error.response.status_code
+        try:
+            detail=error.response.json().get('detail','')
+        except (ValueError,AttributeError):
+            detail=''
+        detail=re.sub(r'[\x00-\x1f\x7f]+',' ',detail.replace(token,'[redacted]'))[:700] if isinstance(detail,str) and detail else ''
         message=('Operator key rejected. Reload OPERATOR_ACCESS_TOKEN from Render in this same terminal; the demo token will not work.' if status in (401,403)
                  else 'The collector is busy. Finish the existing sign-in or collection before starting another.' if status==409
+                 else 'Backend could not complete this action.' if status in (502,503,504) and detail
                  else 'Render is starting or unavailable. Wait for the service to show Live and retry.' if status in (502,503,504)
                  else 'Check the backend deployment and collector logs.')
         print(f'HTTP {status}: {message}',file=sys.stderr)
+        if detail: print(f'Server detail: {detail}',file=sys.stderr)
         return 1
     except httpx.TimeoutException:
         print('Render did not respond within 120 seconds. Check service status and memory/restart logs, then retry.',file=sys.stderr)

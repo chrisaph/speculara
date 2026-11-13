@@ -20,7 +20,7 @@ def test_missing_remote_key_is_actionable(admin,monkeypatch,capsys):
     assert 'missing in this terminal' in capsys.readouterr().err
 
 
-@pytest.mark.parametrize('status,message',[(401,'Operator key rejected'),(403,'Operator key rejected'),(409,'collector is busy'),(503,'Render is starting')])
+@pytest.mark.parametrize('status,message',[(401,'Operator key rejected'),(403,'Operator key rejected'),(409,'collector is busy'),(503,'Server detail: test')])
 def test_http_failures_identify_cause_without_exposing_key(admin,monkeypatch,capsys,status,message):
     token='private-test-operator-key'
     monkeypatch.setenv('OPERATOR_ACCESS_TOKEN',token)
