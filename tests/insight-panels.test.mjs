@@ -75,7 +75,7 @@ test('metric coverage distinguishes missing, zero and imported counts',()=>{
 })
 test('zero backtest score explains excessive error and shows actual-versus-predicted evidence',()=>{
  const html=render.renderValidation({accuracy:0,model:'Last observed week',validation:{weighted_error_pct:150,test_weeks:2,observations:[{date:'2026-11-01',actual:10,predicted:25}]}})
- assert.match(html,/Backtest error: 150%/);assert.match(html,/Exploratory forecast/);assert.match(html,/Low forecast reliability/)
+ assert.match(html,/Accuracy: 0%/);assert.match(html,/Backtest error: 150%/);assert.match(html,/Low reliability/)
  assert.match(html,/does not mean the posts had no activity/);assert.match(html,/Actual/);assert.match(html,/Predicted/)
 })
 
@@ -83,14 +83,14 @@ test('post forecasts use post units and disclose the matching holdout baseline',
  const data={basis:'post',history:[{date:'2026-01-01',value:100}],forecast:[{date:'Next post 1',value:100,low:90,high:110}],accuracy:90,validation:{test_posts:3,weighted_error_pct:10,baseline_weighted_error_pct:20,baseline_model:'Recent four-post average',observations:[{date:'2026-01-02',actual:100,predicted:90}]}}
  const html=render.renderPredict({...analysis,predict:{basis:'post',trend_metric:'likes',metrics:{likes:data},weekly_metrics:{likes:{basis:'week',history:[]}},similar_windows:[]}})
  assert.match(html,/likes per post/);assert.match(html,/Next post 1/);assert.match(html,/Weekly totals/)
- assert.match(html,/Backtest error: 10%/);assert.match(html,/3 latest posts/);assert.match(html,/Post date/)
+ assert.match(html,/Accuracy: 90%/);assert.match(html,/Backtest error: 10%/);assert.match(html,/3 latest posts/);assert.match(html,/Post date/)
  assert.match(html,/20% error on the same holdout/);assert.doesNotMatch(html,/3 completed weeks/)
 })
 
 test('a poor backtest keeps exploratory projection and discloses its actual error',()=>{
  const data={basis:'post',history:[{date:'2026-01-01',value:100}],forecast:[{date:'Next post 8',value:100,low:0,high:900}],accuracy:0,validation:{weighted_error_pct:129.9,test_posts:4}}
  const html=render.renderPredict({...analysis,predict:{basis:'post',trend_metric:'likes',metrics:{likes:data},similar_windows:[]}})
- assert.match(html,/Exploratory forecast/);assert.match(html,/129.9%/)
+ assert.match(html,/Accuracy: 0%/);assert.match(html,/129.9%/)
  assert.match(html,/Next post 8/);assert.match(html,/Download forecast periods and values/)
 })
 test('chat suggestions expose horizontal scrolling and both navigation controls',()=>{
@@ -98,4 +98,22 @@ test('chat suggestions expose horizontal scrolling and both navigation controls'
  assert.match(html,/Previous chat suggestions/);assert.match(html,/Next chat suggestions/)
  assert.match(html,/Scrollable chat suggestions/);assert.match(html,/Swipe, drag/)
  assert.match(html,/Third question/);assert.match(html,/overflow-x-auto/)
+})
+
+test('accuracy uses the Python score, including zero, while raw errors stay in collapsed details',()=>{
+ for(const score of [0,57,100]) {
+   const html=render.renderValidation({accuracy:score,validation:{weighted_error_pct:465.3}})
+   assert.match(html,new RegExp(`Accuracy: ${score}%`))
+   assert.match(html,/<details[^>]*aria-label="Prediction backtest details"/)
+   assert.doesNotMatch(html,/<details[^>]*\sopen(?:\s|>)/)
+ }
+ const missing=render.renderValidation({accuracy:null,validation:{}})
+ assert.match(missing,/Accuracy unavailable/)
+ assert.doesNotMatch(missing,/Accuracy: 0%/)
+})
+
+test('stale withheld forecasts prompt reanalysis instead of contradicting current forecast messaging',()=>{
+ const html=render.renderPredict({...analysis,predict:{basis:'post',trend_metric:'likes',metrics:{likes:{history:[],forecast:[],accuracy:0,reason:'Forecast withheld: old behavior',validation:{weighted_error_pct:465.3}}}}})
+ assert.match(html,/Analyze the profile again/)
+ assert.doesNotMatch(html,/Forecast withheld:/)
 })

@@ -15,7 +15,8 @@
     "collector:test": "node --test integrations/socialmonitor/worker.test.mjs",
     "test:api": "node --test tests/api.test.mjs",
     "test:analysis": "node --test tests/analysis-panels.test.mjs tests/insight-panels.test.mjs",
-    "test:hosting": "node --test tests/hosting.test.mjs tests/netlify.test.mjs"
+    "test:hosting": "node --test tests/hosting.test.mjs tests/netlify.test.mjs",
+    "test:ui": "node --test tests/ui-ready.test.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

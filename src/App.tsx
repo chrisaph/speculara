@@ -5,6 +5,7 @@ import { SentimentPanel, DemandPanel, EvidenceSources, SourceButton } from './co
 import { SuggestionStrip } from './components/SuggestionStrip'
 import { MetricCoverage } from './components/MetricCoverage'
 import { AccessGate } from './components/AccessGate'
+import { AnalysisReadyNotice,AnalysisReadyToast,type ReadyInfo } from './components/AnalysisReady'
 
 type Key = 'predict' | 'recommend' | 'charts' | 'correlation' | 'sentiment' | 'demand'
 
@@ -118,7 +119,7 @@ function Workspace() {
   const datasetInput=useRef<HTMLInputElement>(null)
   const [err, setErr] = useState('')
   const [source, setSource] = useState<{ seed: string; label: string; revision?:number } | null>(null)
-  const [nudge, setNudge] = useState(false)
+  const [completion,setCompletion]=useState<ReadyInfo|null>(null)
   const [busyAction, setBusyAction] = useState<'' | 'analyze' | 'sample' | 'upload' | 'login' | 'finish' | 'cancel'>('')
   const busy = busyAction !== ''
   const [elapsed, setElapsed] = useState(0)
@@ -129,6 +130,13 @@ function Workspace() {
   const [loginNetwork, setLoginNetwork] = useState('instagram')
   const [loginMessage, setLoginMessage] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(()=>{
+    if(!completion)return
+    listRef.current?.scrollIntoView({behavior:'smooth',block:'start'})
+    const timer=setTimeout(()=>setCompletion(null),6000)
+    return ()=>clearTimeout(timer)
+  },[completion])
 
   useEffect(() => {
     let alive = true
@@ -153,9 +161,9 @@ function Workspace() {
   }, [busyAction])
 
   const connect = (seed: string, label: string) => {
-    setSource({ seed, label }); setPicked(null); setTab(null); setErr(''); setNudge(true)
-    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setTimeout(() => setNudge(false), 3500)
+    setSource({ seed, label }); setPicked(null); setTab(null); setErr('')
+    const data=live.get(seed)
+    setCompletion({label,postCount:data?.post_count??data?.evidence?.posts?.length??null})
   }
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -237,6 +245,7 @@ function Workspace() {
   return (
     <Seed.Provider value={source?.seed ?? 'sample'}>
       <div className="min-h-screen pb-24">
+        {completion&&<AnalysisReadyToast info={completion} onChoose={()=>listRef.current?.scrollIntoView({behavior:'smooth',block:'start'})} onDismiss={()=>setCompletion(null)} />}
         <header className="sticky top-0 z-20 bg-mist/90 px-3 pt-3 backdrop-blur">
           <div className="neu mx-auto flex max-w-5xl items-center gap-3 rounded-2xl px-4 py-2.5 sm:px-5">
             <span className="neu-sm grid h-11 w-11 shrink-0 place-items-center rounded-full"><Logo size={32} /></span>
@@ -253,9 +262,9 @@ function Workspace() {
               <p className="mt-3 max-w-md text-slate-700">Paste your page link, then pick a question. Speculara predicts, recommends, charts, correlates and reads sentiment and demand across your posts.</p>
             </div>
 
-            <div ref={listRef} className={`neu rounded-[2rem] p-4 transition ${nudge ? 'ring-2 ring-sky' : ''}`}>
+            <div ref={listRef} id="analysis-options" className={`neu scroll-mt-24 rounded-[2rem] p-4 transition ${completion ? 'ring-2 ring-sky' : ''}`}>
+              {source&&<AnalysisReadyNotice info={{label:source.label,postCount:activeAnalysis?.post_count??activeAnalysis?.evidence?.posts?.length??null}} />}
               <p className="px-2 pt-1 text-xs font-semibold uppercase tracking-widest text-slate-600">Scroll and choose</p>
-              {nudge && <p role="status" className="mx-2 mt-2 rounded-xl bg-sky/20 px-3 py-2 text-sm font-medium text-ink">Connected to {source?.label}. Now scroll and choose a question.</p>}
               <div className="relative">
                 <ul className={`neu-scroll mt-2 h-64 snap-y snap-mandatory overflow-y-scroll px-2 py-1 sm:h-72 ${locked ? 'opacity-50' : ''}`} aria-label="Questions">
                   {ORDER.map((k, i) => (
