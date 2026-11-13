@@ -70,3 +70,17 @@ def test_zero_holdout_total_keeps_exploratory_estimate_without_percentage_score(
     assert len(p['forecast'])==8 and p['reliability']=='unknown'
     assert p['validation']['weighted_error_pct'] is None and p['accuracy'] is None
     assert 'percentage error cannot be calculated' in p['reason']
+
+
+def test_smoothing_does_not_change_shape_when_counts_are_in_millions():
+    values=np.array([3,3,25,9,25,17,50,24,3,11,8,22,10,16,44,12,8,9,2,1],dtype=float)
+    small=insights._fit(values,4,'damped')
+    millions=insights._fit(values*1_000_000,4,'damped')/1_000_000
+    np.testing.assert_allclose(millions,small,rtol=1e-6,atol=1e-6)
+
+
+def test_scaled_smoothing_returns_predictions_in_original_count_units():
+    values=np.arange(100.,124.)
+    result=insights._fit(values*1_000_000,4,'damped')
+    assert np.isfinite(result).all() and np.all(result>100_000_000)
+    np.testing.assert_allclose(result/1_000_000,insights._fit(values,4,'damped'),rtol=1e-6)

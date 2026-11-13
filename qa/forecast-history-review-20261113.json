@@ -1,0 +1,164 @@
+{
+  "as_of": "2026-11-13",
+  "dataset": {
+    "source": "Archived observed Instagram analysis, not a new live collection",
+    "handle": "mrbeast",
+    "posts": 20,
+    "input_analysis_version": 6,
+    "input_sha256": "1a99f889d529e0f39f4f45ae175a058a056be6810f967ca91ef962b0b14cb791",
+    "known_metrics": [
+      "likes",
+      "comments"
+    ],
+    "views_unavailable": true
+  },
+  "historical_replay": [
+    {
+      "commit": "09b3f55",
+      "metric": "likes",
+      "basis": "week",
+      "accuracy": 0,
+      "error": null,
+      "model": "ETS",
+      "forecast_points": 8
+    },
+    {
+      "commit": "09b3f55",
+      "metric": "comments",
+      "basis": "week",
+      "accuracy": 0,
+      "error": null,
+      "model": "ETS",
+      "forecast_points": 8
+    },
+    {
+      "commit": "cf2f031",
+      "metric": "likes",
+      "basis": "week",
+      "accuracy": 0,
+      "error": 464.5,
+      "model": "Recent four-week average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "cf2f031",
+      "metric": "comments",
+      "basis": "week",
+      "accuracy": 0,
+      "error": 317.6,
+      "model": "Recent four-week average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "ed28ea9",
+      "metric": "likes",
+      "basis": "post",
+      "accuracy": 0,
+      "error": 130.0,
+      "model": "Training-history average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "ed28ea9",
+      "metric": "comments",
+      "basis": "post",
+      "accuracy": 30,
+      "error": 70.3,
+      "model": "Training-history average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "0cc6b7b",
+      "metric": "likes",
+      "basis": "post",
+      "accuracy": 0,
+      "error": 130.0,
+      "model": "Training-history average",
+      "forecast_points": 0
+    },
+    {
+      "commit": "0cc6b7b",
+      "metric": "comments",
+      "basis": "post",
+      "accuracy": 30,
+      "error": 70.3,
+      "model": "Training-history average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "a97d419",
+      "metric": "likes",
+      "basis": "post",
+      "accuracy": 0,
+      "error": 130.0,
+      "model": "Training-history average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "a97d419",
+      "metric": "comments",
+      "basis": "post",
+      "accuracy": 30,
+      "error": 70.3,
+      "model": "Training-history average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "21e8557",
+      "metric": "views (all unavailable in this archive)",
+      "basis": "week",
+      "accuracy": 97,
+      "forecast_points": 8
+    },
+    {
+      "commit": "staging-numerical-fix",
+      "metric": "likes",
+      "basis": "post",
+      "accuracy": 0,
+      "error": 130.0,
+      "model": "Training-history average",
+      "forecast_points": 8
+    },
+    {
+      "commit": "staging-numerical-fix",
+      "metric": "comments",
+      "basis": "post",
+      "accuracy": 30,
+      "error": 70.3,
+      "model": "Training-history average",
+      "forecast_points": 8
+    }
+  ],
+  "numerical_regression": {
+    "fixture": "Synthetic spiky count series; same values multiplied by one million",
+    "before_small_units": [
+      15.938703929,
+      15.946912797,
+      15.953479891,
+      15.958733566
+    ],
+    "before_large_units_divided_by_million": [
+      8.705354844,
+      7.201552321,
+      5.712787824,
+      4.238910974
+    ],
+    "after_small_units": [
+      15.938704353539743,
+      15.946913118066986,
+      15.95348012968878,
+      15.958733738986213
+    ],
+    "after_large_units_divided_by_million": [
+      15.938704353539743,
+      15.946913118066986,
+      15.95348012968878,
+      15.958733738986215
+    ]
+  },
+  "cautions": [
+    "Historical weekly and current per-post scores use different targets and must not be ranked as identical tasks.",
+    "The earliest version scored zero placeholders for unavailable views and clipped its training-fit score to 40-97.",
+    "The current model still reports 0 for this archive likes holdout; no score floor or fabricated values were introduced."
+  ]
+}

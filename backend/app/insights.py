@@ -26,10 +26,13 @@ def _fit(y, horizon, method='damped'):
     if method=='mean': return np.repeat(np.mean(y[-4:]),horizon)
     if method=='median': return np.repeat(np.median(y[-5:]),horizon)
     if method=='average': return np.repeat(np.mean(y),horizon)
-    fitted=ExponentialSmoothing(y,trend='add',damped_trend=True,initialization_method='estimated').fit(optimized=True)
+    # Fit in dimensionless units so optimizer tolerances do not change the
+    # forecast shape simply because a profile has millions of engagements.
+    scale=max(float(np.max(np.abs(y))),1.0)
+    fitted=ExponentialSmoothing(np.asarray(y,dtype=float)/scale,trend='add',damped_trend=True,initialization_method='estimated').fit(optimized=True)
     if fitted.mle_retvals is not None and not fitted.mle_retvals.get('success',True):
         raise ValueError('Smoothing model did not converge')
-    return np.asarray(fitted.forecast(horizon))
+    return np.asarray(fitted.forecast(horizon))*scale
 
 
 def _choose_model(train, horizon=1):
