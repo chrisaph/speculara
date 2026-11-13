@@ -4,6 +4,16 @@ import { createInterface } from 'node:readline'
 
 export const NETWORKS = ['instagram', 'facebook', 'tiktok']
 
+export function collectorError(message) {
+  if (/net::ERR_(CONNECTION_RESET|CONNECTION_CLOSED|NETWORK_CHANGED|TIMED_OUT)/.test(message)) return 'The connection to the social network was interrupted. Please try again shortly.'
+  if (/executable doesn.t exist|cannot find package/i.test(message)) return 'Browser setup is incomplete. Rebuild the hosted backend image, or run npm run collector:setup and npm run collector:browser locally.'
+  if (/browserType\.launch/i.test(message)) {
+    const details=message.split('\n').filter(line=>!/<launching>|<launched>|^Call log:|^Browser logs:/.test(line)).slice(0,12).join(' ').replace(/[\x00-\x1f\x7f]/g,' ').slice(0,1400)
+    return `Browser failed to start. Check the writable HOME, virtual display and Render memory logs. Details: ${details}`
+  }
+  return message.replace(/Open "Sign in to networks"/g, 'Use "Sign in for comments" in Speculara')
+}
+
 export function validateProfile(raw) {
   const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`)
   if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password || u.port) throw new Error('Use a public profile URL.')
@@ -106,9 +116,7 @@ async function main() {
     emit({ ok: true, data: await execute(input, deps, emit) })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'SocialMonitor collection failed.'
-    const error = /net::ERR_(CONNECTION_RESET|CONNECTION_CLOSED|NETWORK_CHANGED|TIMED_OUT)/.test(message)
-      ? 'The connection to the social network was interrupted. Please try again shortly.'
-      : /executable doesn't exist|browserType\.launch|cannot find package/i.test(message) ? 'Browser setup is incomplete. Run npm run collector:setup, then npm run collector:browser from speculara.' : message.replace(/Open "Sign in to networks"/g, 'Use "Sign in for comments" in Speculara')
+    const error = collectorError(message)
     emit({ ok: false, error })
     process.exitCode = 1
   } finally { lines?.close(); process.stdin.pause(); await browser?.closeBrowser().catch(() => {}) }

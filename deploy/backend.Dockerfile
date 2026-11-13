@@ -28,6 +28,9 @@ COPY deploy/entrypoint.sh /srv/entrypoint.sh
 COPY deploy/collector-admin.py /srv/collector-admin.py
 RUN sed -i 's/\r$//' /srv/entrypoint.sh
 USER speculara
+# The Render stage briefly runs as root, then setpriv drops back to this user.
+# setpriv does not update HOME; Chromium/crashpad must not inherit /root.
+ENV HOME=/home/speculara USER=speculara LOGNAME=speculara
 EXPOSE 8000 6080
 ENTRYPOINT ["/bin/sh", "/srv/entrypoint.sh"]
 

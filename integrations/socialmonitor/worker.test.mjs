@@ -2,9 +2,21 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { EventEmitter } from 'node:events'
-import { execute, validateProfile } from './worker.mjs'
+import { execute, validateProfile, collectorError } from './worker.mjs'
 import { timelinePosts, navigateProfile } from './instagram-data.mjs'
 import { facebookStories } from './facebook-data.mjs'
+
+test('browser crashes preserve the real cause instead of claiming missing installation',()=>{
+  const result=collectorError('browserType.launchPersistentContext: Target closed\nBrowser logs:\n<launching> chromium --long-launch-arguments\n[pid=42][err] chrome_crashpad_handler: --database is required\n[pid=42][err] Permission denied')
+  assert.match(result,/Browser failed to start/)
+  assert.match(result,/crashpad_handler/)
+  assert.match(result,/Permission denied/)
+  assert.doesNotMatch(result,/setup is incomplete|long-launch-arguments/)
+})
+
+test('missing browser executables still get installation guidance',()=>{
+  assert.match(collectorError("browserType.launch: Executable doesn't exist at /ms-playwright/chrome"),/Rebuild the hosted backend image/)
+})
 
 test('Facebook reads initial Relay stories and excludes other profile posts', () => {
   const story = { __typename: 'Story', post_id: '100', url: 'https://www.facebook.com/joanquizonmakeup/posts/100', comet_sections: {} }
