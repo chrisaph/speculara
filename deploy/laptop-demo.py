@@ -40,7 +40,7 @@ def credentials():
 def backend_environment(keys):
     return {**os.environ,'SPECULARA_REQUIRE_AUTH':'1','DEMO_ACCESS_TOKEN':keys['demo'],
             'OPERATOR_ACCESS_TOKEN':keys['operator'],'FRONTEND_URL':FRONTEND,
-            'CORS_ORIGINS':FRONTEND+',http://localhost:8443,http://127.0.0.1:8443',
+            'CORS_ORIGINS':FRONTEND+',https://speculara.net,https://www.speculara.net,http://localhost:8443,http://127.0.0.1:8443',
             'CORS_ORIGIN_REGEX':'','SPECULARA_COLLECTOR_DATA_DIR':str(ROOT/'backend/.socialmonitor'),
             'OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1'}
 
