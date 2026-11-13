@@ -282,9 +282,10 @@ function Workspace() {
                 <label htmlFor="url" className="mb-1 block px-1 text-xs font-medium text-slate-700">Your social media page link</label>
                 <div className="neu-in flex flex-col gap-2 rounded-2xl p-2 sm:flex-row">
                   <input id="url" value={url} onChange={(e) => { setUrl(e.target.value); setErr('') }} inputMode="url" autoComplete="url" placeholder="instagram.com/yourbrand"
-                    aria-invalid={!!err} aria-describedby="url-msg" className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none" />
+                    aria-invalid={!!err} aria-describedby="url-msg demo-guidance" className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm outline-none" />
                   <button disabled={busy} className="neu-btn min-h-11 rounded-xl px-5 text-sm font-medium text-white disabled:opacity-60">{busyAction === 'analyze' ? 'Collecting…' : busy ? 'Please wait…' : 'Analyze'}</button>
                 </div>
+                <p id="demo-guidance" className="mt-3 px-1 text-xs leading-relaxed text-slate-600"><strong className="text-ink">For the demo:</strong> Try sample data or a complete CSV / Excel file to explore all features with known data. Profile links also work for testing live collection; public pages may not supply every metric. Sample results are illustrative.</p>
                 <p id="url-msg" className="min-h-5 px-1 pt-1 text-xs text-wine" role="alert">{err}</p>
                 {busyAction === 'analyze' && <p role="status" className="px-1 pb-2 text-sm text-ink">{progress} · {elapsed}s elapsed. Reading posts and comments may take several minutes.</p>}
                 {!OPERATOR_MANAGED && (busyAction === 'analyze' || (collectorBusy && !loginOpen)) && <button type="button" onClick={cancelAnalysis} disabled={busyAction === 'cancel'} className="mb-2 min-h-10 px-2 text-sm font-semibold text-wine underline">Cancel collection</button>}

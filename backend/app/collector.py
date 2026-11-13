@@ -280,3 +280,11 @@ async def collect_profile(raw_url: str, limit: int = 20) -> tuple[ProfileInfo, l
     if not 5<=limit<=50: raise CollectorError('Choose 5 to 50 posts.',422)
     result = await asyncio.to_thread(_invoke_sync, {"action": "collect", "url": canonical, "limit": limit})
     return normalize(result, canonical, network, handle)
+
+
+async def enrich_public_metrics(posts: list[Post]) -> dict:
+    candidates = [{"id": p.id, "url": p.url} for p in posts
+                  if p.url and any(m in p.unavailable_metrics for m in ('views', 'shares', 'saves'))][:20]
+    if not candidates:
+        return {"posts": [], "checked": 0, "notes": []}
+    return await asyncio.to_thread(_invoke_sync, {"action": "enrich", "posts": candidates, "limit": len(candidates)})

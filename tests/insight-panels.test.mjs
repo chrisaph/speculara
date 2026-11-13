@@ -32,7 +32,7 @@ test('negative and strong filters update real relationship list',()=>{
 })
 test('prediction renders actual observed values and no fabricated accuracy or reminder',()=>{
  const html=render.renderPredict(analysis)
- assert.match(html,/23/); assert.match(html,/Accuracy unavailable/); assert.match(html,/View evidence/)
+ assert.match(html,/23/); assert.match(html,/Accuracy unavailable/); assert.match(html,/Illustrative trend lifecycle/)
  assert.doesNotMatch(html,/88%|Reminder set|Jan 25|NaN|undefined/)
 })
 test('recommendations render post titles, dropdown and source with no item placeholders or lifts',()=>{
@@ -79,20 +79,22 @@ test('zero backtest score explains excessive error and shows actual-versus-predi
  assert.match(html,/does not mean the posts had no activity/);assert.match(html,/Actual/);assert.match(html,/Predicted/)
 })
 
-test('post forecasts use post units and disclose the matching holdout baseline',()=>{
- const data={basis:'post',history:[{date:'2026-01-01',value:100}],forecast:[{date:'Next post 1',value:100,low:90,high:110}],accuracy:90,validation:{test_posts:3,weighted_error_pct:10,baseline_weighted_error_pct:20,baseline_model:'Recent four-post average',observations:[{date:'2026-01-02',actual:100,predicted:90}]}}
- const html=render.renderPredict({...analysis,predict:{basis:'post',trend_metric:'likes',metrics:{likes:data},weekly_metrics:{likes:{basis:'week',history:[]}},similar_windows:[]}})
- assert.match(html,/likes per post/);assert.match(html,/Next post 1/);assert.match(html,/Weekly totals/)
- assert.match(html,/Accuracy: 90%/);assert.match(html,/Backtest error: 10%/);assert.match(html,/3 latest posts/);assert.match(html,/Post date/)
- assert.match(html,/20% error on the same holdout/);assert.doesNotMatch(html,/3 completed weeks/)
+test('simple prediction uses real post values with the future highlight and accuracy',()=>{
+ const data={basis:'post',history:[{date:'2026-01-01',value:100}],forecast:[{date:'Next post 1',value:120,low:90,high:150}],accuracy:65}
+ const html=render.renderPredict({predict:{trend_metric:'likes',metrics:{likes:data},weekly_metrics:{likes:{basis:'week',history:[],forecast:[]}}}})
+ assert.match(html,/likes per post/);assert.match(html,/Next post 1/)
+ assert.match(html,/Accuracy: 65%/);assert.match(html,/Measures fit to historical data/)
+ assert.match(html,/data-forecast-band="true"/);assert.match(html,/stroke-dasharray="6 4"/)
+ assert.match(html,/>Forecast</);assert.match(html,/Documentation/)
+ assert.doesNotMatch(html,/Forecast check:|Explore the forecast|Forecast detail/)
 })
 
-test('a poor backtest keeps exploratory projection and discloses its actual error',()=>{
- const data={basis:'post',history:[{date:'2026-01-01',value:100}],forecast:[{date:'Next post 8',value:100,low:0,high:900}],accuracy:0,validation:{weighted_error_pct:129.9,test_posts:4}}
- const html=render.renderPredict({...analysis,predict:{basis:'post',trend_metric:'likes',metrics:{likes:data},similar_windows:[]}})
- assert.match(html,/Accuracy: 0%/);assert.match(html,/129.9%/)
- assert.match(html,/Next post 8/);assert.match(html,/Download forecast periods and values/)
+test('simple prediction never raises a low score to meet a display target',()=>{
+ const data={basis:'post',history:[{date:'2026-01-01',value:100}],forecast:[{date:'Next post 8',value:100,low:0,high:900}],accuracy:0}
+ const html=render.renderPredict({predict:{trend_metric:'likes',metrics:{likes:data}}})
+ assert.match(html,/Accuracy: 0%/);assert.match(html,/Next post 8/)
 })
+
 test('chat suggestions expose horizontal scrolling and both navigation controls',()=>{
  const html=render.renderSuggestions(['First question','Second question','Third question'])
  assert.match(html,/Previous chat suggestions/);assert.match(html,/Next chat suggestions/)
@@ -116,4 +118,53 @@ test('stale withheld forecasts prompt reanalysis instead of contradicting curren
  const html=render.renderPredict({...analysis,predict:{basis:'post',trend_metric:'likes',metrics:{likes:{history:[],forecast:[],accuracy:0,reason:'Forecast withheld: old behavior',validation:{weighted_error_pct:465.3}}}}})
  assert.match(html,/Analyze the profile again/)
  assert.doesNotMatch(html,/Forecast withheld:/)
+})
+
+
+test('weekly chart and accuracy stay paired while automatic checks remain in backend data',()=>{
+ const post={basis:'post',history:[{date:'2026-11-01',value:100}],forecast:[{date:'Next post 1',value:120,low:90,high:150}],accuracy:46,forecast_check:{score:10,checks:10}}
+ const weekly={basis:'week',history:[{date:'2026-11-01',value:200}],forecast:[{date:'2026-11-08',value:250,low:100,high:400}],accuracy:53}
+ const data={predict:{trend_metric:'likes',metrics:{likes:post},weekly_metrics:{likes:weekly}}}
+ const html=render.renderPredict(data)
+ assert.match(html,/Accuracy: 53%/);assert.match(html,/likes by week/)
+ assert.doesNotMatch(html,/Accuracy: 46%|Forecast check:|Next post 1/)
+ assert.equal(data.predict.metrics.likes.forecast_check.checks,10)
+ const short=render.renderPredict({...data,predict:{...data.predict,weekly_metrics:{likes:{...weekly,forecast:[],accuracy:97}}}})
+ assert.match(short,/Accuracy: 46%/);assert.match(short,/likes per post/)
+ assert.doesNotMatch(short,/Accuracy: 97%/)
+})
+
+test('missing metric is explained without a blank model line',()=>{
+ const html=render.renderValidation({score_basis:'fitted_history',accuracy:null,reason:'No observed views values were supplied.'})
+ assert.match(html,/No observed views/)
+ assert.doesNotMatch(html,/Measures how closely|undefined|NaN/)
+})
+
+
+test('simple prediction retains the lifecycle design and selects real daily data when eligible',()=>{
+ const daily={basis:'day',history:[{date:'2026-01-14',value:14}],forecast:[{date:'2026-01-15',value:15,low:14,high:16}],accuracy:97,model:'Daily linear trend'}
+ const html=render.renderPredict({predict:{trend_metric:'likes',metrics:{likes:{history:[],forecast:[]}},daily_metrics:{likes:daily},weekly_metrics:{likes:{phase:'Rising',growth:12,similar:0,weeks_left:null}}}})
+ assert.match(html,/Accuracy: 97%/);assert.match(html,/likes by day/)
+ assert.match(html,/data-forecast-band="true"/);assert.match(html,/Illustrative trend lifecycle/)
+ assert.match(html,/Download forecast data/);assert.match(html,/Measures fit to historical data/)
+ assert.doesNotMatch(html,/placeholder|Forecast check:|NaN|undefined/)
+})
+
+test('demo guidance recommends complete inputs and explains link limitations',()=>{
+ const html=render.renderApp()
+ assert.match(html,/For the demo:/);assert.match(html,/complete CSV/)
+ assert.match(html,/Profile links also work/);assert.match(html,/Sample results are illustrative/)
+ assert.match(html,/url-msg demo-guidance/)
+})
+
+
+test('large uncertainty cannot hide the chart line without an explicit scale explanation',()=>{
+ const data={basis:'post',history:[{date:'2026-11-01',value:1000},{date:'2026-11-02',value:1800}],forecast:[{date:'Next post 1',value:1500,low:0,high:471400000}],accuracy:60}
+ const html=render.renderPredict({predict:{trend_metric:'likes',metrics:{likes:data},weekly_metrics:{likes:{growth:null}},post_trends:{likes:{basis:'post',phase:'Rising',growth:15,similar:0,posts_left:null}}}})
+ assert.match(html,/Log scale keeps the full forecast range visible/)
+ assert.match(html,/471,400,000/)
+ assert.match(html,/View exact values and ranges/)
+ assert.match(html,/Activity \/ post/)
+ assert.match(html,/Phase: Rising/)
+ assert.doesNotMatch(html,/NaN|undefined/)
 })

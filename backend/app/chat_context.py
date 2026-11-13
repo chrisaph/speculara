@@ -75,13 +75,14 @@ def model_context(analysis: dict, budget: int = 16000, question: str = '') -> di
         c['facts']={k:v for k,v in c['facts'].items() if k in {'counts','phase','weeks','acc','growth','similar','pos','neg','neu','data_quality'}}
     if 'recommend' in c:c['recommend'].pop('comparisons',None)
     pred=c.get('predict',{})
-    pred.pop('weekly_metrics',None)
+    for key in ('weekly_metrics','daily_metrics','post_trends','forecast_check'):pred.pop(key,None)
     for key in ('history','forecast','similar_windows'):pred.pop(key,None)
     for key in ('validation','model','reason','coverage','partial_weeks','accuracy'):pred.pop(key,None)
     requested={m for m in ('views','likes','comments','shares','saves','sales') if m in question.lower()}
     if not requested:requested={pred.get('trend_metric','views')}
     for metric,item in pred.get('metrics',{}).items():
         item.pop('history',None)
+        item.pop('forecast_check',None)
         if metric not in requested:
             item.pop('forecast',None);item.pop('validation',None)
     for keyword in c.get('sentiment',{}).get('keywords',[]):keyword.pop('sample_ids',None)

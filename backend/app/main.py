@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import analytics, db, collector
+from . import analytics, db, collector, metric_enrichment
 from .config import get_settings
 from .llm import chat_answer, LLMUnavailable
 from .sample import sample_posts
@@ -43,6 +43,7 @@ async def lifespan(_app):
     finally:
         await collector.cancel_collection()
         await collector.finish_login()
+        await metric_enrichment.shutdown()
 
 
 app = FastAPI(title="Speculara API", version="1.0.0", lifespan=lifespan)
@@ -204,6 +205,27 @@ async def import_metrics(file: UploadFile = File(...), analysis: str = Form(...)
     profile['notes']=f"{len(posts)} posts analyzed. Imported {summary['updated_values']} counts for {summary['matched_posts']} matching posts. Public and user-imported metrics are labeled separately."
     result['facts']['data_quality']={'source':'Collected posts + user-imported metrics','unavailable_metrics':profile['unavailable_metrics'],'notes':profile['notes']}
     return {'analysis_id':None,'cached':False,'profile':profile,'metric_import':summary,**result}
+
+
+@app.post('/api/enrichment/start')
+async def start_metric_enrichment(body: dict):
+    active = body.get('analysis')
+    if not isinstance(active, dict) or len(json.dumps(active)) > 2_000_000:
+        raise HTTPException(422, 'Provide a current analysis smaller than 2 MB.')
+    try:
+        return metric_enrichment.start(active, refresh=body.get('refresh') is True)
+    except (ValueError, TypeError) as error:
+        raise HTTPException(422, str(error))
+    except RuntimeError as error:
+        raise HTTPException(409, str(error))
+
+
+@app.get('/api/enrichment/{job_id}')
+def metric_enrichment_status(job_id: str):
+    result = metric_enrichment.status(job_id)
+    if result is None:
+        raise HTTPException(404, 'Background check not found or expired.')
+    return result
 
 
 @app.post("/api/chat")

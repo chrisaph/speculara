@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { api } from '../api'
 import { chartView, correlationView, postTitle, resolvePost, safePostLink } from '../insights'
 import { SourceButton } from './AnalysisPanels'
-import { ForecastValidation } from './ForecastValidation'
+import { PredictionAccuracy } from './ForecastValidation'
 
 const INK = '#29348f', SKY = '#38bdf8', WINE = '#8f2934'
 const fmt = (v: number) => Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 1 }) : 'Unavailable'
@@ -19,32 +19,110 @@ function PostPicker({ posts, selected, onChange, all = false }: { posts: any[]; 
     <form className="neu-in flex gap-2 rounded-xl p-2" onSubmit={e => { e.preventDefault(); const id = resolvePost(posts, input); if (id && (all || id !== 'all')) { onChange(id); setError('') } else setError('That post is not in this analysis. Choose a collected post or analyze its profile first.') }}><input aria-label="Collected post URL or ID" placeholder="Paste a collected post or reel URL" value={input} onChange={e => setInput(e.target.value)} className="min-h-10 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button className="neu-btn rounded-xl px-4 text-sm text-white">Find</button></form>{error && <p role="alert" className="text-xs text-wine">{error}</p>}</div>
 }
 
-export function LinePlot({ history = [], forecast = [], label }: { history?: any[]; forecast?: any[]; label: string }) {
-  const all = [...history.map(p => ({ ...p, label: p.date || p.label })), ...forecast.map(p => ({ ...p, label: p.date, future: true }))]
+export function LinePlot({ history = [], forecast = [], label, showBand = true, posts = [], historyLabel = 'Observed' }: { history?: any[]; forecast?: any[]; label: string; showBand?: boolean; posts?: any[]; historyLabel?: string }) {
+  const [active, setActive] = useState<number | null>(null)
+  const gradientId = useId().replace(/:/g, '')
+  const all = [...history.map(p => ({ ...p, label: p.date || p.label, future: false })), ...forecast.map(p => ({ ...p, label: p.date, future: true }))]
   if (!all.length) return <Empty>No observed values are available for this metric.</Empty>
-  const max = Math.max(1, ...all.map(p => p.high ?? p.value)), W = 640, H = 250
-  const x = (i: number) => 62 + i * 550 / Math.max(1, all.length - 1), y = (v: number) => 202 - 172 * v / max
+  const W = 720, H = 300, L = 60, R = 690, T = 32, B = 244
+  const maximum = Math.max(1, ...all.map(p => showBand ? (p.high ?? p.value) : p.value)) * 1.08
+  const magnitude = Math.pow(10, Math.floor(Math.log10(maximum)))
+  const top = ([1, 1.25, 1.5, 2, 2.5, 4, 5, 7.5, 10].find(v => v * magnitude >= maximum) || 10) * magnitude
+  const calendar = all.every(p => /^\d{4}-\d{2}-\d{2}$/.test(p.label))
+  const timestamps = calendar ? all.map(p => Date.parse(p.label)) : all.map((_, i) => i)
+  const extent = Math.max(1, timestamps[timestamps.length - 1] - timestamps[0])
+  const x = (i: number) => L + (timestamps[i] - timestamps[0]) * (R - L) / extent
+  const y = (v: number) => B - Math.max(0, v) * (B - T) / top
   const coords = (rows: any[], start = 0) => rows.map((p, i) => `${x(start + i)},${y(p.value)}`).join(' ')
-  return <><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="w-full">
-    {[0, .25, .5, .75, 1].map(t => <g key={t}><line x1="62" x2="612" y1={y(max * t)} y2={y(max * t)} stroke="#cbd5e1" /><text x="55" y={y(max * t) + 4} textAnchor="end" fontSize="10" fill="#475569">{axis(max * t)}</text></g>)}
-    {forecast.length > 0 && <polygon fill={SKY} opacity=".2" points={[...forecast.map((p, i) => `${x(history.length + i)},${y(p.high)}`), ...[...forecast].reverse().map((p, i) => `${x(all.length - 1 - i)},${y(p.low)}`)].join(' ')} />}
-    <polyline fill="none" stroke={SKY} strokeWidth="3" points={coords(history)} />
-    {forecast.length > 0 && <polyline fill="none" stroke={INK} strokeWidth="3" strokeDasharray="6 4" points={coords([...(history.length ? [history[history.length - 1]] : []), ...forecast], Math.max(0, history.length - 1))} />}
-    {all.map((p, i) => <g key={i}><circle cx={x(i)} cy={y(p.value)} r="3" fill="#f1f5f9" stroke={p.future ? INK : SKY} strokeWidth="2"><title>{`${p.label}: ${fmt(p.value)}${p.future ? " forecast" : ""}`}</title></circle>{all.length <= 14 && <text x={x(i)} y={y(p.value) - 9} fontSize="9" textAnchor="middle" fill={INK}>{fmt(p.value)}</text>}{(i === 0 || i === all.length - 1 || i === Math.floor(all.length / 2)) && <text x={x(i)} y="222" fontSize="10" textAnchor="middle" fill="#475569">{p.label}</text>}</g>)}
-    <text x="62" y="244" fontSize="10" fill={INK}>{label}</text>
-  </svg><details className="mt-2 text-xs text-slate-600"><summary className="cursor-pointer font-semibold text-ink">Read numeric values</summary><div className="max-h-60 overflow-auto"><table className="mt-2 w-full text-left"><thead><tr><th>Period</th><th>Value</th><th>Basis</th></tr></thead><tbody>{all.map((p, i) => <tr key={i}><td className="py-1">{p.label}</td><td>{fmt(p.value)}</td><td>{p.future ? `Forecast (${fmt(p.low)}–${fmt(p.high)})` : 'Observed'}</td></tr>)}</tbody></table></div></details></>
+  const boundary = Math.max(0, history.length - 1)
+  const chosen = active == null ? boundary : Math.min(active, all.length - 1)
+  const point = all[chosen]
+  const tickIndices = all.reduce<number[]>((ticks, _, i) => {
+    const last = ticks[ticks.length - 1]
+    if (i === 0 || (x(i) - x(last) >= 100 && R - x(i) >= 80)) ticks.push(i)
+    if (i === all.length - 1 && !ticks.includes(i) && (last == null || x(i) - x(last) >= 70)) ticks.push(i)
+    return ticks
+  }, [])
+  const shortDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(value + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) : value.replace('Next post ', 'Post +')
+  const sourceFor = (id: string) => posts.find(post => String(post.id) === id)
+  return <div>
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"><span>{point.future ? 'Forecast' : historyLabel} <strong className="ml-1 text-ink">{point.label}: {fmt(point.value)}</strong></span><span className="flex items-center gap-3"><span><span className="mr-1 inline-block h-2 w-2 rounded-full bg-sky" />{historyLabel}</span>{forecast.length > 0 && <span><span className="mr-1 inline-block w-4 border-t-2 border-dashed border-ink align-middle" />Forecast</span>}</span></div>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="w-full overflow-visible">
+      <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={SKY} stopOpacity=".3" /><stop offset="100%" stopColor={SKY} stopOpacity=".08" /></linearGradient></defs>
+      {[0, .25, .5, .75, 1].map(t => <g key={t}><line x1={L} x2={R} y1={y(top * t)} y2={y(top * t)} stroke="#d8e1ec" strokeDasharray={t ? '3 5' : undefined} /><text x={L - 12} y={y(top * t) + 4} textAnchor="end" fontSize="11" fill="#64748b">{axis(top * t)}</text></g>)}
+      {forecast.length > 0 && <><rect x={x(boundary)} y={T} width={R - x(boundary)} height={B - T} fill={SKY} opacity=".045" /><line x1={x(boundary)} x2={x(boundary)} y1={T} y2={B} stroke="#a5b4cf" strokeDasharray="3 5" /><text x={(x(boundary) + R) / 2} y="19" textAnchor="middle" fontSize="11" fill={INK}>Forecast</text></>}
+      {showBand && forecast.length > 0 && <polygon fill={`url(#${gradientId})`} data-forecast-band="true" points={[...(history.length ? [`${x(boundary)},${y(history[boundary].value)}`] : []), ...forecast.map((p, i) => `${x(history.length + i)},${y(p.high)}`), ...[...forecast].reverse().map((p, i) => `${x(all.length - 1 - i)},${y(p.low)}`)].join(' ')} />}
+      <polyline fill="none" stroke={SKY} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={coords(history)} />
+      {forecast.length > 0 && <polyline fill="none" stroke={INK} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 4" points={coords([...(history.length ? [history[boundary]] : []), ...forecast], boundary)} />}
+      {active != null && <line x1={x(chosen)} x2={x(chosen)} y1={T} y2={B} stroke="#94a3b8" strokeDasharray="2 4" />}
+      {all.map((p, i) => <circle key={i} cx={x(i)} cy={y(p.value)} r={i === chosen ? 5 : 2.8} fill={i === chosen ? (p.future ? INK : SKY) : '#f1f5f9'} stroke={p.future ? INK : SKY} strokeWidth="2" tabIndex={0} role="button" aria-label={`${p.future ? 'Forecast' : historyLabel} ${p.label}: ${fmt(p.value)}`} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} onClick={() => setActive(i)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActive(i) } }}><title>{`${p.label}: ${fmt(p.value)}${p.future ? `; range ${fmt(p.low)} to ${fmt(p.high)}` : ''}`}</title></circle>)}
+      {tickIndices.map(i => <text key={i} x={x(i)} y="267" textAnchor={i === 0 ? 'start' : i === all.length - 1 ? 'end' : 'middle'} fontSize="10" fill="#64748b">{shortDate(all[i].label)}</text>)}
+      <text x={L} y="292" fontSize="10" fill="#64748b">{label}</text>
+    </svg>
+    <details className="mt-1 text-xs text-slate-600"><summary className="min-h-8 cursor-pointer font-semibold text-ink">Read numeric values</summary><div className="max-h-64 overflow-auto"><table className="w-full min-w-[22rem] text-left"><caption className="mb-2 text-left">Historical input values and backend forecast ranges.</caption><thead><tr><th scope="col">Period</th><th scope="col">Value</th><th scope="col">Basis / source</th></tr></thead><tbody>{all.map((p, i) => <tr key={i} className="border-t border-slate-200"><td className="py-2 pr-2">{p.label}</td><td className="pr-2">{fmt(p.value)}</td><td>{p.future ? `Forecast (${fmt(p.low)} to ${fmt(p.high)})` : <><span>{historyLabel}{p.post_count ? ` from ${p.post_count} posts` : ''}</span>{[...(p.post_ids || []), ...(p.post_id ? [p.post_id] : [])].map((id: string) => { const source = sourceFor(id); return source ? <span key={id} className="ml-2 inline-block"><SourceButton url={source.url} postType={source.type} label="Post source" /></span> : null })}</>}</td></tr>)}</tbody></table></div></details>
+  </div>
+}
+
+function PredictionPlot({ data, metric }: { data: any; metric: string }) {
+  const history = data.history || [], forecast = data.forecast || []
+  const points = [...history, ...forecast]
+  if (!points.length) return <Empty>{data.reason?.startsWith('Forecast withheld:') ? 'Analyze the profile again to refresh this saved forecast.' : (data.reason || 'No observed values are available for this metric.')}</Empty>
+  const W = 680, H = 260, L = 48, R = 650, T = 30, B = 214
+  const centerMax = Math.max(1, ...points.map((p:any) => p.value))
+  const boundMax = Math.max(centerMax, ...points.map((p:any) => p.high ?? p.value))
+  const logScale = boundMax > centerMax * 4
+  const maximum = boundMax * 1.08
+  const transform = (value:number) => logScale ? Math.log1p(Math.max(0,value)) : Math.max(0,value)
+  const inverse = (value:number) => logScale ? Math.expm1(value) : value
+  const x = (i: number) => L + i * (R - L) / Math.max(1, points.length - 1)
+  const y = (v: number) => B - transform(v) / transform(maximum) * (B - T)
+  const path = (rows: any[], offset = 0) => rows.map((p, i) => `${x(offset + i)},${y(p.value)}`).join(' ')
+  const anchor = Math.max(0, history.length - 1)
+  const dateLabel = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(value + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) : value.replace('Next post ', 'Post +')
+  const ticks = points.map((_: any, i: number) => i).filter((i: number) => i === 0 || i === points.length - 1 || (i % Math.max(1, Math.ceil(points.length / 5)) === 0 && i < points.length - 2))
+  return <><svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${metric} ${data.basis === 'week' ? 'by week' : data.basis === 'day' ? 'by day' : 'per post'}`} className="w-full">
+    {[0,.25,.5,.75,1].map(t => <g key={t}><line x1={L} x2={R} y1={y(inverse(transform(maximum)*t))} y2={y(inverse(transform(maximum)*t))} stroke="#d5dce6" /><text x={L-10} y={y(inverse(transform(maximum)*t))+4} textAnchor="end" fontSize="10" fill="#64748b">{axis(inverse(transform(maximum)*t))}</text></g>)}
+    {forecast.length > 0 && <><text x={(x(anchor)+R)/2} y="16" fontSize="11" textAnchor="middle" fill={INK}>Forecast</text><polygon data-forecast-band="true" fill={SKY} opacity=".22" points={[...(history.length ? [`${x(anchor)},${y(history[anchor].value)}`] : []), ...forecast.map((p:any,i:number)=>`${x(history.length+i)},${y(p.high)}`), ...[...forecast].reverse().map((p:any,i:number)=>`${x(points.length-1-i)},${y(p.low)}`)].join(' ')} /></>}
+    <polyline fill="none" stroke={SKY} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={path(history)} />
+    {forecast.length > 0 && <polyline fill="none" stroke={INK} strokeWidth="2.5" strokeDasharray="6 4" points={path([...(history.length ? [history[anchor]] : []),...forecast],anchor)} />}
+    {history.map((p:any,i:number)=><circle key={i} cx={x(i)} cy={y(p.value)} r="3" fill="#f1f5f9" stroke={SKY} strokeWidth="1.8"><title>{`${p.date}: ${fmt(p.value)}`}</title></circle>)}
+    {forecast.map((p:any,i:number)=><circle key={i} cx={x(history.length+i)} cy={y(p.value)} r="2" fill={INK}><title>{`${p.date}: ${fmt(p.value)}; range ${fmt(p.low)} to ${fmt(p.high)}`}</title></circle>)}
+    {ticks.map((i:number)=><text key={i} x={x(i)} y="238" fontSize="9" textAnchor={i===0?'start':i===points.length-1?'end':'middle'} fill="#64748b">{dateLabel(points[i].date)}</text>)}
+  </svg>{logScale && <p className="text-xs text-slate-600">Log scale keeps the full forecast range visible. Equal spacing shows relative change; values are unchanged.</p>}<details className="mt-2 text-xs text-slate-600"><summary className="min-h-8 cursor-pointer font-semibold text-ink">View exact values and ranges</summary><div className="max-h-60 overflow-auto"><table className="w-full min-w-[20rem] text-left"><thead><tr><th>Period</th><th>Value</th><th>Range</th></tr></thead><tbody>{points.map((p:any,i:number)=><tr key={i}><td className="py-2">{p.date}</td><td>{fmt(p.value)}</td><td>{i < history.length ? 'Observed' : `${fmt(p.low)} to ${fmt(p.high)}`}</td></tr>)}</tbody></table></div></details></>
 }
 
 export function PredictPanel({ analysis }: { analysis: any }) {
-  const p = analysis?.predict || {}, [metric, setMetric] = useState(p.trend_metric || 'views'), [matches, setMatches] = useState(false), [basis,setBasis]=useState(p.basis==='post'?'Per post':'Weekly totals')
-  const dialog = useRef<HTMLDialogElement>(null)
-  useEffect(() => { if (matches) dialog.current?.showModal(); else dialog.current?.close() }, [matches])
-  const data = (basis==='Weekly totals'?(p.weekly_metrics||p.metrics):p.metrics)?.[metric] || {}, windows = p.similar_windows || []
-  const visibleForecast = data.forecast_supported===false ? [] : (data.forecast || [])
-  const csv = ['period,value,low,high,reliability', ...visibleForecast.map((r: any) => `${r.date},${r.value},${r.low},${r.high},${data.reliability || 'unknown'}`)].join('\n')
-  return <div className="space-y-5"><Card title="Prediction" sub="Estimate counts for the next posts from observed post values. Weekly totals remain available as a separate view."><Tabs items={['views', 'saves', 'likes', 'comments', 'shares', 'sales']} value={metric} onChange={setMetric} /><Tabs items={['Per post', 'Weekly totals']} value={basis} onChange={setBasis} /><p className="text-xs text-slate-600">{basis==='Per post'?'One observation per collected post. Weeks with no collected posts are not inserted as zeros. Future points mean the next posts, not promised publication dates.':'Snapshot counts grouped by posting week. Empty weeks mean no collected posts, not zero account activity.'}</p><Well><LinePlot history={data.history} forecast={visibleForecast} label={`${metric} ${basis==='Per post'?'per post':'by week'}`} /></Well>{data.reason && !data.reason.startsWith('Exploratory estimate') && <Empty>{data.reason.startsWith('Forecast withheld:')?'This saved result contains history only. Analyze the profile again to refresh its forecast.':data.reason}</Empty>}<ForecastValidation data={data} />{visibleForecast.length > 0 && <a href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`} download={`speculara-${metric}-forecast.csv`} className="neu-sm inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-ink">Download forecast periods and values</a>}<details className="text-xs text-slate-600"><summary className="cursor-pointer font-semibold text-ink">Forecast method and limits</summary><p className="mt-2">Model selection compares recent averages, a median, the last observed value, the training average and eligible damped smoothing models on rolling multi-step training folds. At least six dated posts or six completed weekly observations are required, depending on the selected basis. The shaded band is an approximate 90% error band from held-out RMSE, widening by the square root of the horizon. It is not a guarantee. Missing metrics are excluded. These are cumulative snapshot counts. Older posts have had more time to gain engagement, so the forecast does not compare performance at a fixed post age. Weekly gaps do not prove complete account coverage. The remaining-duration panel separately uses weekly history.</p></details></Card>
-    <Card title="Trend longevity prediction" sub={`Trend measured by observed ${p.trend_metric || 'available metrics'} within this profile.`}><div className="grid gap-4 sm:grid-cols-3"><Well><p className="text-xs text-slate-600">Recent phase</p><p className="mt-1 font-display text-xl font-bold text-ink">{p.phase || 'Insufficient history'}</p></Well><Well><p className="text-xs text-slate-600">Estimated remaining duration</p><p className="mt-1 font-display text-xl font-bold text-ink">{p.weeks_left == null ? 'Unavailable' : `~${p.weeks_left} weeks`}</p></Well><button onClick={() => setMatches(true)} className="neu-sm min-h-20 rounded-2xl p-4 text-left text-ink"><span className="block text-xs">Similar historical windows</span><strong className="font-display text-xl">{windows.length} · View evidence</strong></button></div><p className="text-sm text-slate-600">{p.growth == null ? 'Not enough recent and prior weeks for a growth comparison.' : `${p.growth > 0 ? '+' : ''}${p.growth}%: latest three-week average compared with the previous three weeks.`}</p><p className="text-xs text-slate-600">{p.trend_scope} {p.longevity_note}</p></Card>
-    <dialog ref={dialog} onCancel={() => setMatches(false)} onClose={() => setMatches(false)} aria-label="Similar historical windows evidence" className="neu fixed inset-0 m-auto max-h-[80vh] w-[min(42rem,90vw)] overflow-auto rounded-3xl bg-mist p-5 text-slate-700 backdrop:bg-slate-900/30"><div className="flex items-start justify-between gap-3"><h3 className="font-display text-lg font-bold text-ink">Similar historical windows</h3><button onClick={() => setMatches(false)} className="neu-sm min-h-10 rounded-full px-4 text-ink">Close</button></div><p className="my-3 text-xs">Four-week windows with normalized cosine similarity above 0.97. These are comparisons within the collected profile, not external trends.</p>{windows.length ? windows.map((w: any) => <div key={w.start} className="neu-in mb-4 rounded-2xl p-4"><p className="font-semibold text-ink">{w.start} to {w.end} · {Math.round(w.similarity * 100)}% shape similarity</p><p className="mt-1 text-xs">{w.weeks_observed_after} follow-up weeks observed{w.censored ? '; duration unfinished and excluded from estimate' : ' before the decline threshold'}.</p><p className="mt-2 text-xs">Weekly values: {w.history.map((r: any) => `${r.date}: ${fmt(r.value)}`).join(', ')}</p><ul className="mt-3 space-y-2">{w.posts.map((post: any) => <li key={post.id} className="flex items-center justify-between gap-3 text-sm"><span className="break-words">{post.title}</span><SourceButton url={post.url} postType={post.type} /></li>)}</ul></div>) : <Empty>No comparable historical windows were found. No external examples were invented.</Empty>}</dialog>
+  const p = analysis?.predict || {}, [metric, setMetric] = useState(p.trend_metric || 'likes')
+  useEffect(() => { setMetric(p.trend_metric || 'likes') }, [analysis])
+  const weekly = p.weekly_metrics?.[metric], daily = p.daily_metrics?.[metric]
+  const data = daily?.forecast?.length ? daily : weekly?.forecast?.length ? weekly : (p.metrics?.[metric] || {})
+  const trend = weekly?.growth != null ? weekly : (p.post_trends?.[metric] || weekly || {})
+  const phase = trend.phase || 'Insufficient history'
+  const hasPhase = ['Rising','Peaking','Declining'].includes(phase)
+  const nowX = phase === 'Rising' ? 30 : phase === 'Peaking' ? 50 : 70
+  const curve = (x:number) => 100 - 80*Math.exp(-Math.pow((x-50)/22,2))
+  const curvePoints = Array.from({length:41},(_,i)=>`${i*2.5},${curve(i*2.5)}`).join(' ')
+  const csv = ['period,value,low,high', ...(data.forecast || []).map((v:any)=>`${v.date},${v.value},${v.low},${v.high}`)].join('\n')
+  return <div className="space-y-5">
+    <Card title="Prediction" sub="Forecast of your next posts with a confidence band.">
+      <Tabs items={['Views','Saves','Likes','Comments','Shares','Sales']} value={metric.charAt(0).toUpperCase()+metric.slice(1)} onChange={value=>setMetric(value.toLowerCase())} />
+      <Well><PredictionPlot data={data} metric={metric} /></Well>
+      {!(data.forecast || []).length && <p role="status" className="text-center text-xs text-slate-600">{data.reason?.startsWith('Forecast withheld:') ? 'Analyze the profile again to refresh this saved forecast.' : data.reason}</p>}
+      <PredictionAccuracy data={data} />
+      {(data.forecast || []).length > 0 && <div className="flex justify-center"><a href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`} download={`speculara-${metric}-forecast.csv`} className="neu-sm inline-flex min-h-11 items-center rounded-full px-5 py-2.5 text-center text-xs text-ink">Download forecast data</a></div>}
+      <div className="pt-2 text-sm"><p className="text-slate-600">Want to know how we did this?</p><a href="#prediction-documentation" className="inline-flex min-h-10 items-center text-ink underline decoration-sky underline-offset-4">Documentation</a></div>
+      <details id="prediction-documentation" className="scroll-mt-6 text-xs leading-relaxed text-slate-600"><summary className="min-h-8 cursor-pointer font-semibold text-ink">How prediction works</summary>
+        <p className="mt-2">Accuracy describes historical fit: 100 minus average percentage fitting error, limited to 0-97%. Missing metrics and weeks with no collected posts are excluded. A high fit score is different from performance on later posts.</p>
+        <p className="mt-2">Complete daily CSV uploads use a linear or last-value baseline, selected on three held-out dates and refit on all dates. Other data uses smoothing or simple log trends. Four observed weeks enable calendar forecasts; shorter date ranges use the next post sequence. Forecast ranges are approximate residual bands. Snapshot counts mix posts of different ages.</p>
+        <p className="mt-2">{data.coverage} Model: {data.model || 'Unavailable'}. {data.basis === 'day' ? 'Daily forecast.' : data.basis === 'week' ? 'Weekly forecast.' : 'Per-post forecast; future post numbers are not dates.'}</p>
+        <p className="mt-2">Separate next-post checks run automatically in the backend, using earlier posts only. No additional collection is needed.</p>
+      </details>
+    </Card>
+    <Card title="Trend longevity prediction" sub="How activity is changing, from this profile's observed patterns.">
+      <div className="grid gap-4 md:grid-cols-2"><Well><p className="text-xs font-semibold text-ink">Trend lifecycle</p><svg viewBox="0 0 100 115" role="img" aria-label={`Illustrative trend lifecycle; ${phase}`} className="mx-auto mt-2 w-full max-w-xs"><polyline points={curvePoints} fill="none" stroke={SKY} strokeWidth="2.5" />{hasPhase && <><line x1={nowX} x2={nowX} y1="10" y2="100" stroke={WINE} strokeDasharray="3 2" /><circle cx={nowX} cy={curve(nowX)} r="3.5" fill={WINE} /><text x={nowX} y="8" fontSize="6" textAnchor="middle" fill={WINE}>Now</text></>}<text x="5" y="110" fontSize="5" fill="#475569">Emerging</text><text x="50" y="110" fontSize="5" textAnchor="middle" fill="#475569">Peak</text><text x="95" y="110" fontSize="5" textAnchor="end" fill="#475569">Fading</text></svg></Well>
+      <div className="space-y-3"><div className="neu-in rounded-2xl p-4 text-center"><p className="text-xs text-slate-600">Estimated time left</p><p className="font-display text-3xl font-bold text-ink">{trend.basis === 'post' ? (trend.posts_left == null ? 'More history needed' : `~${trend.posts_left} posts`) : (trend.weeks_left == null ? 'More history needed' : `~${trend.weeks_left} weeks`)}</p><p className="mt-1 text-xs text-slate-600">{hasPhase ? `Phase: ${phase}` : 'Not enough comparable history'}</p></div><div className="grid grid-cols-3 gap-2">{[{label:'Similar patterns',value:trend.similar ?? 0},{label:trend.basis === 'post' ? 'Activity / post' : 'Activity / wk',value:trend.growth == null ? 'Unavailable' : `${trend.growth>0?'+':''}${trend.growth}%`},{label:'Positive sentiment',value:analysis?.sentiment?.scored ? `${analysis.sentiment.pos}%` : 'Unavailable'}].map(item=><div key={item.label} className="neu-in min-w-0 rounded-xl p-3 text-center"><p className="break-words font-display text-sm font-bold text-ink sm:text-lg">{item.value}</p><p className="mt-1 text-[11px] text-slate-600">{item.label}</p></div>)}</div><p className="text-sm text-ink">{phase==='Rising'?'Activity is rising. Consider testing a related post.':phase==='Declining'?'Activity is declining. Consider refreshing your next idea.':phase==='Peaking'?'Recent activity is steady. Compare your strongest posts.':'More weekly history is needed to identify the phase.'}</p></div></div>
+      <p className="text-xs text-slate-600">Lifecycle illustration; phase uses {trend.basis === 'post' ? 'the latest posts because the sample covers too few weeks' : 'observed weekly totals'}. Duration needs a completed comparable pattern within this profile; 20 recent posts may not cover one. {weekly?.history?.length || 0} observed weeks and {p.metrics?.[metric]?.history?.length || 0} posts are available. No global trend dataset is implied.</p>
+    </Card>
   </div>
 }
 

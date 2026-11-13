@@ -1,3 +1,4 @@
+import { readPublicMetrics } from './public-metrics.mjs'
 import { mkdir } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { createInterface } from 'node:readline'
@@ -57,6 +58,7 @@ export async function execute(input, deps, emit = () => {}) {
       return { closed: true }
     } finally { clearTimeout(timer); await closeBrowser() }
   }
+  if (input.action === 'enrich') return readPublicMetrics(input, deps, emit)
   if (input.action !== 'collect' && input.action !== 'smoke') throw new Error('Unknown collector action.')
   const profile = input.action === 'collect' ? validateProfile(input.url) : null
   await mkdir(dataDir, { recursive: true })

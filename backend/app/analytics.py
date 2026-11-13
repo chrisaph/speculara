@@ -12,14 +12,14 @@ from collections import Counter
 
 import numpy as np
 import pandas as pd
-from scipy import stats
-from sklearn.metrics.pairwise import cosine_similarity
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
+from .text_sentiment import score_text, METHOD
 from .schemas import Post
 from .evidence import build_evidence, ANALYSIS_VERSION, safe_url
-from .text_sentiment import score_text, METHOD
+from .insights import availability, correlation, charts, recommend
+from .observed_prediction import predict
 
 warnings.filterwarnings("ignore")
 _vader = SentimentIntensityAnalyzer()
@@ -68,13 +68,13 @@ def posts_from_file(content: bytes, filename: str) -> list[Post]:
             continue
         num = lambda k: int(row[k]) if k in raw.columns and pd.notna(row[k]) else 0  # noqa: E731
         cs = str(row["comments_sample"]).split("|") if "comments_sample" in raw.columns and pd.notna(row["comments_sample"]) else []
-        missing = [m for m in ['likes', 'comments', 'shares', 'saves', 'views', 'sales'] if m not in raw.columns or pd.isna(row[m])]
+        missing = [m for m in METRICS + ["sales"] if m not in raw.columns or pd.isna(row[m])]
         out.append(Post(
             id=str(row.get("id", i)), type=str(row["type"]) if "type" in raw.columns and pd.notna(row["type"]) else "Photo",
             posted_at=pd.to_datetime(row["posted_at"]).to_pydatetime(), caption=str(row["caption"]) if "caption" in raw.columns and pd.notna(row["caption"]) else "",
             likes=num("likes"), comments=num("comments"), shares=num("shares"), saves=num("saves"), views=num("views"), sales=num("sales"), comments_sample=cs,
-            unavailable_metrics=missing, url=safe_url(row.get('url', row.get('post_url', ''))),
-            metric_sources={m:'Uploaded file' for m in ['likes','comments','shares','saves','views','sales'] if m not in missing},
+            unavailable_metrics=missing, url=safe_url(row.get("url", row.get("post_url", ""))),
+            metric_sources={m: "Uploaded file" for m in METRICS + ["sales"] if m not in missing},
         ))
     return out
 
@@ -114,7 +114,7 @@ def sentiment(df: pd.DataFrame, evidence: dict) -> dict:
         by_type.append({"type": ty, "posts": len({c["post_id"] for c in group}), "scored": len(group),
                         "pos": positive, "neg": negative, "neu": 100 - positive - negative,
                         "sentiment": round(float(np.mean([c["score"] for c in group])), 3)})
-    return {"method":METHOD,"pos": pos, "neg": neg, "neu": 100 - pos - neg if n else 0,
+    return {"method": METHOD, "pos": pos, "neg": neg, "neu": 100 - pos - neg if n else 0,
             "keywords": keywords, "by_post_type": by_type, "scored": n, "basis": basis, "samples": samples,
             "comment_sample_count": len(evidence["comments"])}
 
@@ -164,9 +164,6 @@ def _weekly_growth(series: np.ndarray) -> int:
     return int(round(float(np.mean(g)) * 100))
 
 
-from .insights import predict, correlation, charts, recommend, availability
-
-
 # ---------------- Orchestrator ----------------
 def analyze(posts: list[Post]) -> dict:
     if len(posts) < MIN_POSTS:
@@ -175,8 +172,8 @@ def analyze(posts: list[Post]) -> dict:
     evidence = build_evidence(posts)
     s, d, p, c = sentiment(df, evidence), demand(df), predict(df), correlation(df)
     coverage = availability(df)
-    counts = {m.capitalize(): c['total'] for m,c in coverage.items()}
-    counts['Dislikes'] = None  # Negative comments are not measured dislikes.
+    counts = {metric.capitalize(): item["total"] for metric, item in coverage.items()}
+    counts["Dislikes"] = None
     facts = {
         "weeks": p["weeks_left"], "phase": p["phase"], "acc": p["accuracy"],
         "pos": s["pos"], "neg": s["neg"], "neu": s["neu"],
