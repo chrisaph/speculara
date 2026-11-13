@@ -4,6 +4,8 @@ Local social media analysis with forecasts, post similarity, charts, correlation
 
 ## Run
 
+For the demo using the laptop's browser and saved sessions with the existing Netlify site, use the [protected laptop + Netlify launcher](deploy/laptop-netlify.md). It avoids running Instagram collection from Render's network.
+
 For the hosted private MVP, follow the [Render Free backend + Netlify frontend setup](deploy/render-netlify.md). It includes separate operator sign-in and a demo access code. Browser collection is experimental on Free's limited memory; saved sessions are temporary and can disappear on sleep, restart or redeploy. A [single-VPS deployment](deploy/README.md) is also available.
 
 See [backend setup](backend/README.md). Keep the Python API at `http://localhost:8000` and run `npm.cmd run dev` from this directory for the frontend at `http://localhost:8443`.
