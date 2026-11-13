@@ -4,6 +4,8 @@
 
 Cloudflare DNS discovery timed out on this laptop's current connection. No system DNS/firewall changes were made. ngrok provides a separate HTTPS connection option; it still needs verification on this network and is not guaranteed to work if network policy blocks it.
 
+The launcher uses ngrok's documented `root_cas("host")` setting so the SDK validates connections against Windows' trusted certificate store. It does not disable TLS checks. After this change, a live tunnel on this laptop passed public health, valid/invalid demo access, exact Netlify CORS and blocked visitor sign-in checks. This verifies the tunnel, not Instagram collection. If a handshake still fails on another network, the launcher reports that failure without a traceback; contact the network administrator rather than disabling certificate verification.
+
 1. Create/sign in to a **Free** account at `https://dashboard.ngrok.com/signup`. Copy **Your Authtoken** from its dashboard. Do not send it to chat or put it in Netlify. The official optional SDK is already installed on this laptop; elsewhere install `python -m pip install -r deploy/requirements-laptop.txt`.
 2. Immediately run this to import the copied token into the account-restricted, git-ignored credentials file:
 

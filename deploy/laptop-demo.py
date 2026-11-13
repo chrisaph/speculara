@@ -69,8 +69,12 @@ def child_options():
 
 async def host_ngrok(keys,api):
     import ngrok
-    listener=await asyncio.wait_for(ngrok.forward(LOCAL,authtoken=keys['ngrok']),timeout=60)
+    session=None;listener=None
     try:
+        # ngrok defaults to its bundled CA. Use the documented host trust store
+        # on managed Windows, keeping certificate and hostname checks enabled.
+        session=await asyncio.wait_for(ngrok.SessionBuilder().authtoken(keys['ngrok']).root_cas('host').connect(),timeout=60)
+        listener=await asyncio.wait_for(session.http_endpoint().listen_and_forward(LOCAL),timeout=60)
         url=listener.url()
         if not url.startswith('https://'):raise RuntimeError('ngrok did not provide an HTTPS endpoint.')
         save_state(status='ready',provider='ngrok',url=url,backend=LOCAL,frontend=FRONTEND,owner=getpass.getuser())
@@ -79,7 +83,15 @@ async def host_ngrok(keys,api):
         while not STOP.exists():
             if api.poll() is not None:raise RuntimeError('Backend exited; ngrok is being stopped.')
             await asyncio.sleep(1)
-    finally:await listener.close()
+    except ValueError as error:
+        if 'tls handshake' in str(error).lower():
+            raise RuntimeError('ngrok TLS handshake failed using the Windows trusted certificates. The network may block or inspect ngrok traffic. Ask IT to permit the agent or use approved hosting; TLS verification has not been disabled.') from None
+        raise RuntimeError('ngrok could not establish the tunnel: '+str(error)) from None
+    finally:
+        for resource in (listener,session):
+            if resource is not None:
+                try:await asyncio.wait_for(resource.close(),timeout=5)
+                except Exception:pass
 
 
 def start(provider='cloudflare'):
@@ -194,7 +206,7 @@ def main():
 if __name__=='__main__':
     try:main()
     except KeyboardInterrupt:pass
-    except (RuntimeError,AssertionError,httpx.HTTPError,OSError) as error:
+    except (RuntimeError,AssertionError,httpx.HTTPError,OSError,ValueError) as error:
         message=str(error)
         if CREDS.exists():
             for value in json.loads(CREDS.read_text(encoding='utf-8')).values():
